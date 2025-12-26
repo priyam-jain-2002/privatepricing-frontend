@@ -12,33 +12,79 @@ export default function StorefrontLoginRoute() {
 
     useEffect(() => {
         async function loadContext() {
+            // 0. Check for existing session
+            const token = sessionStorage.getItem('access_token');
+            const role = sessionStorage.getItem('user_role');
+
+            if (token) {
+                if (role && Number(role) === 0) {
+                    // Owner logged in, go to dashboard
+                    // But dashboard is on a different subdomain potentially?
+                    // Dashboard is supported on subdomains too now via middleware/rewrite preservation?
+                    // Actually, next.config rewrites / -> /storefront on subdomain.
+                    // /dashboard is NOT rewritten. So it should work.
+                    // However, if we are on 'firstly.localhost', /dashboard works.
+                    window.location.href = '/dashboard';
+                    return;
+                } else {
+                    // Customer user, go to storefront
+                    window.location.href = '/storefront';
+                    return;
+                }
+            }
+
             try {
                 let currentStore: any = null;
 
                 // 1. Try to get subdomain from hostname
-                // e.g. store1.localhost -> store1
                 const hostname = window.location.hostname;
                 const parts = hostname.split('.');
 
-                // If we have a subdomain (more than 1 part for localhost, or more than 2 for domain.com)
-                // This logic might need tuning for production domains (e.g. app.domain.com)
-                if (parts.length > 1 && parts[0] !== 'www') {
-                    const subdomain = parts[0];
-                    console.log("Detected subdomain:", subdomain);
-                    try {
-                        currentStore = await fetchStoreBySubdomain(subdomain);
-                    } catch (e) {
-                        console.warn("Failed to find store by subdomain", subdomain);
+                // Check for localhost or production domain structure
+                const isLocalhost = hostname.includes('localhost');
+                const hasSubdomain = isLocalhost ? parts.length > 1 : parts.length > 2;
+
+                if (isLocalhost ? parts.length > 1 : parts.length > 2) {
+                    // Check 'www'
+                    if (parts[0] !== 'www') {
+                        const subdomain = parts[0];
+                        console.log(`[Login] Detected subdomain: ${subdomain} from host: ${hostname}`);
+                        try {
+                            currentStore = await fetchStoreBySubdomain(subdomain);
+                            console.log(`[Login] Fetched store for subdomain ${subdomain}:`, currentStore);
+                        } catch (e) {
+                            console.warn(`[Login] Failed to find store by subdomain ${subdomain}`, e);
+                        }
                     }
                 }
 
                 // 2. Fallback: Check Query Param ?store=...
+                // STRICT REDIRECT: If found via param, redirect to subdomain URL.
                 if (!currentStore) {
                     const params = new URLSearchParams(window.location.search);
                     const storeParam = params.get('store');
                     if (storeParam) {
                         try {
-                            currentStore = await fetchStoreBySubdomain(storeParam);
+                            const storeByParam = await fetchStoreBySubdomain(storeParam);
+                            if (storeByParam && storeByParam.subdomain) {
+                                // Redirect to canonical subdomain
+                                const protocol = window.location.protocol;
+                                const port = window.location.port ? `:${window.location.port}` : '';
+                                const rootDomain = isLocalhost ? 'localhost' : parts.slice(hasSubdomain ? 1 : 0).join('.');
+
+                                // Logic to construct new host
+                                // If currently localhost:3000, make it store.localhost:3000
+                                // If currently domain.com, make it store.domain.com
+
+                                const newHost = `${storeByParam.subdomain}.${rootDomain}${port}`;
+
+                                // Prevent infinite reload if we are already there (should be caught by step 1, but safety check)
+                                if (window.location.host !== newHost) {
+                                    window.location.href = `${protocol}//${newHost}/storefront/login`;
+                                    return; // Stop execution
+                                }
+                                currentStore = storeByParam;
+                            }
                         } catch (e) {
                             console.warn("Failed to find store by param", storeParam);
                         }
@@ -49,7 +95,14 @@ export default function StorefrontLoginRoute() {
                 if (!currentStore) {
                     const stores = await fetchStores();
                     if (stores && stores.length > 0) {
-                        currentStore = stores[0];
+                        // Optional: Redirect to first store's subdomain if available?
+                        // Maybe checking if it has a subdomain
+                        if (stores[0].subdomain) {
+                            currentStore = stores[0];
+                            // We could redirect here too, but let's be careful about dev loop
+                        } else {
+                            currentStore = stores[0];
+                        }
                     }
                 }
 

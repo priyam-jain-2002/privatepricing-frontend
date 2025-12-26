@@ -57,6 +57,7 @@ export async function fetchStores() {
 }
 
 export async function fetchStoreBySubdomain(subdomain: string) {
+    console.log(`[API] fetchStoreBySubdomain calling: /stores/subdomain/${subdomain}`);
     return fetchAPI(`/stores/subdomain/${subdomain}`);
 }
 
@@ -67,6 +68,22 @@ export async function fetchCustomers() {
 
 export async function fetchProducts() {
     return fetchAPI(`/products`, { headers: getAuthHeaders() });
+}
+
+export async function createProduct(data: any) {
+    return fetchAPI(`/products`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: getAuthHeaders()
+    });
+}
+
+export async function updateProduct(productId: string, data: any) {
+    return fetchAPI(`/products/${productId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+        headers: getAuthHeaders()
+    });
 }
 
 export async function createCustomer(data: any) {
@@ -105,12 +122,29 @@ export async function createBranch(customerId: string, data: any) {
     });
 }
 
-export async function fetchBranchUsers(customerId: string, branchId: string) {
-    return fetchAPI(`/customers/${customerId}/branches/${branchId}/users`, { headers: getAuthHeaders() });
+
+export async function createCustomerUser(customerId: string, data: any) {
+    return fetchAPI(`/customers/${customerId}/users`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: getAuthHeaders()
+    });
 }
 
-export async function fetchOrders() {
-    return fetchAPI(`/orders`, { headers: getAuthHeaders() });
+export async function fetchCustomerUsers(customerId: string) {
+    return fetchAPI(`/customers/${customerId}/users`, { headers: getAuthHeaders() });
+}
+
+export async function updateCustomerUser(customerId: string, userId: string, data: any) {
+    return fetchAPI(`/customers/${customerId}/users/${userId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+        headers: getAuthHeaders()
+    });
+}
+
+export async function fetchBranchUsers(customerId: string, branchId: string) {
+    return fetchAPI(`/customers/${customerId}/branches/${branchId}/users`, { headers: getAuthHeaders() });
 }
 
 export async function loginStorefront(data: any) {
@@ -118,4 +152,59 @@ export async function loginStorefront(data: any) {
         method: 'POST',
         body: JSON.stringify(data)
     });
+}
+
+export async function fetchAllOrders(storeId: string) {
+    return fetchAPI(`/stores/${storeId}/orders`, { headers: getAuthHeaders() });
+}
+
+export async function updateOrderStatus(storeId: string, orderId: string, status: string) {
+    return fetchAPI(`/stores/${storeId}/orders/${orderId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+        headers: getAuthHeaders()
+    });
+}
+
+export async function updateProductPricing(productId: string, data: any) {
+    return fetchAPI(`/products/${productId}/pricing`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+        headers: getAuthHeaders()
+    });
+}
+
+export async function getCustomerPricings(storeId: string, customerId: string) {
+    return fetchAPI(`/stores/${storeId}/customer-product-pricings/customers/${customerId}`, { headers: getAuthHeaders() });
+}
+
+export async function createCustomerPricing(storeId: string, data: any) {
+    return fetchAPI(`/stores/${storeId}/customer-product-pricings`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: getAuthHeaders()
+    });
+}
+
+export async function updateCustomerPricing(storeId: string, customerId: string, productId: string, data: any) {
+    return fetchAPI(`/stores/${storeId}/customer-product-pricings/customers/${customerId}/products/${productId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+        headers: getAuthHeaders()
+    });
+}
+export async function createStorefrontOrder(storeId: string, customerId: string, branchId: string | undefined | null, data: any) {
+    if (branchId) {
+        return fetchAPI(`/stores/${storeId}/customers/${customerId}/branches/${branchId}/orders`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+            headers: getAuthHeaders()
+        });
+    } else {
+        return fetchAPI(`/stores/${storeId}/customers/${customerId}/orders`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+            headers: getAuthHeaders()
+        });
+    }
 }

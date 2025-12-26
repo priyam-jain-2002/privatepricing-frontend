@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ShoppingCart, LogOut, Package, Search, Menu, X, User } from "lucide-react"
+import { ShoppingCart, LogOut, Package, Search, Menu, X, User, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
+import { toast } from "sonner"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { fetchAPI, getUserFromToken } from "@/lib/api"
+import { fetchAPI, getUserFromToken, createStorefrontOrder } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 interface Product {
@@ -52,6 +54,7 @@ export function CustomerStorefront() {
   // Store Context
   const [storeId, setStoreId] = useState<string | null>(null)
   const [storeName, setStoreName] = useState<string>("")
+  const [subdomain, setSubdomain] = useState<string | null>(null)
 
   // Auth State
   const [user, setUser] = useState<User | null>(null)
@@ -67,22 +70,24 @@ export function CustomerStorefront() {
       const decodedUser = getUserFromToken()
 
       if (!token || !decodedUser) {
-        router.push('/')
+        // Must redirect to login page specifically, not root (which rewrites to storefront)
+        router.push('/storefront/login')
         return
       }
 
       setAccessToken(token)
 
-      const { storeId: tokStoreId, id: userId, role: userRole, email, customerId, branchId } = decodedUser;
+      const { storeId: tokStoreId, id, sub, role: userRole, email, customerId, branchId } = decodedUser;
+      const userId = id || sub;
 
       if (tokStoreId) setStoreId(tokStoreId)
 
-      if (userId && userRole !== undefined) {
+      if (userId) {
         setUser({
           id: userId,
           email: email || '',
-          role: Number(userRole),
-          name: decodedUser.name // Assuming name is in token or we might miss it if not added to payload
+          role: userRole !== undefined ? Number(userRole) : 3, // Default to 3 (Customer/Branch User) if undefined
+          name: decodedUser.name
         })
       }
 
@@ -95,12 +100,12 @@ export function CustomerStorefront() {
       // 2. Fetch Store Info
       try {
         if (tokStoreId) {
-          const stores = await fetchAPI('/stores', {
+          const currentStore = await fetchAPI(`/stores/${tokStoreId}`, {
             headers: { Authorization: `Bearer ${token}` }
           })
-          const currentStore = stores.find((s: any) => s.id === tokStoreId)
           if (currentStore) {
             setStoreName(currentStore.name)
+            if (currentStore.subdomain) setSubdomain(currentStore.subdomain)
           }
         } else {
           // ...
@@ -132,7 +137,7 @@ export function CustomerStorefront() {
           unit: "unit",
           price: Number(p.price),
           quantity: 0,
-          currency: p.currency,
+          currency: p.currency || 'INR',
           description: p.productDescription,
           minimumQuantity: p.minimumQuantity || 1,
           productSku: p.productSku
@@ -168,16 +173,91 @@ export function CustomerStorefront() {
     setTotalItems(products.reduce((sum, p) => sum + p.quantity, 0))
   }, [products])
 
-  const handleOrder = () => {
-    const orderItems = products.filter(p => p.quantity > 0)
-    console.log("Order placed:", orderItems)
-    alert(`Order request placed for ${orderItems.length} items! (Demo)`)
-    setProducts(products.map(p => ({ ...p, quantity: 0 })))
+  // Review Dialog State
+  const [isReviewOpen, setIsReviewOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Calculated totals for review
+  const orderItems = products.filter(p => p.quantity > 0)
+  const orderTotal = orderItems.reduce((sum, p) => sum + (p.price * p.quantity), 0)
+  const orderCurrency = orderItems[0]?.currency || 'INR'
+
+  const handleOrderRequest = () => {
+    if (!storeId || !user || !authContext?.customer?.id) {
+      toast.error("Missing user context. Cannot place order.")
+      return
+    }
+    if (orderItems.length === 0) return
+    setIsReviewOpen(true)
+  }
+
+  const confirmOrder = async () => {
+    try {
+      setIsSubmitting(true)
+      const payload: any = {
+        items: orderItems.map(p => ({
+          productId: p.id,
+          quantity: p.quantity
+        }))
+      }
+
+      if (user?.role === 0) {
+        payload.placedByUserId = user.id;
+      } else {
+        payload.placedByCustomerUserId = user?.id;
+      }
+
+      const order = await createStorefrontOrder(storeId!, authContext!.customer!.id, authContext!.branch?.id, payload)
+
+      toast.success(`Order #${order.orderNumber} placed successfully!`, {
+        description: `Order for ${orderItems.length} items submitted.`
+      })
+
+      setProducts(products.map(p => ({ ...p, quantity: 0 })))
+      setTotalItems(0)
+      setIsReviewOpen(false)
+    } catch (err) {
+      console.error("Failed to place order", err)
+      toast.error("Failed to place order. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleLogout = () => {
     sessionStorage.clear()
-    router.push('/')
+
+    if (subdomain) {
+      const protocol = window.location.protocol;
+      const host = window.location.host;
+
+      // Check if we are already on the correct subdomain
+      if (host.startsWith(`${subdomain}.`)) {
+        router.push('/storefront/login');
+        return;
+      }
+
+      // Construct URL
+      let rootDomain = host;
+      if (host.includes('localhost')) {
+        // Localhost handling
+        const parts = host.split('.');
+        if (parts.length > 1) {
+          rootDomain = parts.slice(1).join('.');
+        }
+      } else {
+        // Production handling (simplified)
+        const parts = host.split('.');
+        if (parts.length > 2) {
+          rootDomain = parts.slice(1).join('.');
+        }
+      }
+
+      // Provide a clean redirect
+      window.location.href = `${protocol}//${subdomain}.${rootDomain}/storefront/login`;
+    } else {
+      router.push('/storefront/login');
+    }
   }
 
   // --- Render Helpers ---
@@ -195,7 +275,15 @@ export function CustomerStorefront() {
 
   // If we are here, we should be logged in. 
   // If user is null but loading is false, it means init failed or redirect happened.
-  if (!user) return null
+  if (!user) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50 flex-col">
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Problem</h2>
+        <p className="text-gray-500 mb-4">We couldn't verify your session. Please log in again.</p>
+        <Button onClick={() => router.push('/storefront/login')}>Go to Login</Button>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
@@ -206,15 +294,15 @@ export function CustomerStorefront() {
             {/* Logo */}
             <div className="flex-shrink-0 flex items-center gap-2">
               <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
-                {storeName.charAt(0)}
+                {storeName ? storeName.charAt(0) : 'S'}
               </div>
-              <span className="font-bold text-xl tracking-tight text-slate-900">{storeName}</span>
+              <span className="font-bold text-xl tracking-tight text-slate-900">{storeName || 'Store'}</span>
             </div>
 
             {/* Desktop Nav Actions */}
             <div className="hidden md:flex items-center space-x-6">
               <div className="flex flex-col items-end mr-2">
-                <span className="text-sm font-medium text-slate-800">{user.name || user.email || 'User'}</span>
+                <span className="text-sm font-medium text-slate-800">{user.name || user.email}</span>
                 {authContext?.customer?.name && (
                   <span className="text-xs text-slate-500">{authContext.customer.name}</span>
                 )}
@@ -223,7 +311,7 @@ export function CustomerStorefront() {
               <div className="h-8 w-px bg-gray-200"></div>
 
               <Button
-                onClick={handleOrder}
+                onClick={handleOrderRequest}
                 disabled={totalItems === 0}
                 className={cn(
                   "relative transition-all duration-200 shadow-sm",
@@ -239,6 +327,83 @@ export function CustomerStorefront() {
                 )}
               </Button>
 
+              <Sheet open={isReviewOpen} onOpenChange={setIsReviewOpen}>
+                <SheetContent side="right" className="w-[100vw] sm:max-w-[540px] flex flex-col h-full bg-white shadow-2xl border-l border-gray-100">
+                  <SheetHeader className="border-b border-gray-100 pb-6 mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 bg-blue-50 rounded-full flex items-center justify-center">
+                        <ShoppingCart className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="text-left">
+                        <SheetTitle className="text-xl">Your Cart</SheetTitle>
+                        <SheetDescription className="text-sm text-slate-500">
+                          Review your items before placing the order.
+                        </SheetDescription>
+                      </div>
+                    </div>
+                  </SheetHeader>
+
+                  <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+                    {orderItems.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-48 text-gray-400">
+                        <ShoppingCart className="h-12 w-12 mb-3 opacity-20" />
+                        <p>Your cart is empty</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {orderItems.map((item) => (
+                          <div key={item.id} className="flex gap-4 p-4 rounded-xl border border-gray-50 bg-gray-50/50 hover:border-blue-100 hover:bg-blue-50/30 transition-colors">
+                            <div className="h-16 w-16 bg-white rounded-lg border border-gray-100 flex items-center justify-center flex-shrink-0">
+                              <Package className="h-8 w-8 text-gray-300" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start mb-1">
+                                <h4 className="font-medium text-gray-900 truncate pr-2">{item.name}</h4>
+                                <span className="font-semibold text-gray-900 flex-shrink-0">
+                                  {item.currency === 'INR' ? `Rs. ${(item.price * item.quantity).toFixed(2)}` : `${item.currency} ${(item.price * item.quantity).toFixed(2)}`}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-500 mb-2">{item.description}</p>
+                              <div className="flex items-center justify-between">
+                                <div className="text-xs text-gray-400 font-medium bg-white px-2 py-1 rounded border border-gray-100">
+                                  {item.quantity} x {item.currency === 'INR' ? `Rs. ${item.price}` : `${item.currency} ${item.price}`}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, item.quantity - 1)}>-</Button>
+                                  <span className="w-4 text-center text-sm font-medium">{item.quantity}</span>
+                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, item.quantity + 1)}>+</Button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <SheetFooter className="mt-auto border-t border-gray-100 pt-6">
+                    <div className="w-full space-y-4">
+                      <div className="flex justify-between items-center px-1">
+                        <span className="text-slate-500 font-medium">Subtotal</span>
+                        <span className="text-xl font-bold text-slate-900">
+                          {orderCurrency === 'INR'
+                            ? `Rs. ${orderTotal.toFixed(2)}`
+                            : `${orderCurrency} ${orderTotal.toFixed(2)}`}
+                        </span>
+                      </div>
+                      <div className="flex gap-3 pt-2">
+                        <Button variant="outline" className="flex-1 h-12" onClick={() => setIsReviewOpen(false)} disabled={isSubmitting}>
+                          Continue Shopping
+                        </Button>
+                        <Button onClick={confirmOrder} disabled={isSubmitting || orderItems.length === 0} className="flex-[2] h-12 bg-blue-600 hover:bg-blue-700 text-lg shadow-blue-200 shadow-lg">
+                          {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : "Confirm Order"}
+                        </Button>
+                      </div>
+                    </div>
+                  </SheetFooter>
+                </SheetContent>
+              </Sheet>
+
               <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-400 hover:text-slate-600">
                 <LogOut className="h-5 w-5" />
               </Button>
@@ -252,7 +417,9 @@ export function CustomerStorefront() {
             </div>
           </div>
         </div>
-      </nav>
+      </nav >
+      {/* ... rest of render ... */}
+
 
       {/* Hero / Welcome Section */}
       <div className="bg-white border-b border-gray-100">
@@ -331,7 +498,7 @@ export function CustomerStorefront() {
                     <div className="flex items-baseline gap-1">
                       <span className="text-2xl font-bold text-slate-900 tracking-tight">
                         {/* Simple formatting */}
-                        {new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency }).format(product.price)}
+                        {product.currency === 'INR' ? `Rs. ${product.price.toFixed(2)}` : new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency }).format(product.price)}
                       </span>
                       <span className="text-sm text-gray-400 font-medium">/ {product.unit}</span>
                     </div>
@@ -375,6 +542,6 @@ export function CustomerStorefront() {
           </div>
         )}
       </main>
-    </div>
+    </div >
   )
 }
