@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { LoginPage } from "@/components/login-page"
-import { fetchAPI } from "@/lib/api"
 import { Loader2 } from "lucide-react"
-
+// ...
 export default function StorefrontPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)

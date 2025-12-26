@@ -39,21 +39,7 @@ export function LoginPage({ storeName = "Private Pricing OS" }: LoginPageProps) 
             if (data && data.accessToken) {
                 // Store in Session Storage
                 sessionStorage.setItem('access_token', data.accessToken)
-
-                if (data.context?.store?.id) {
-                    sessionStorage.setItem('store_id', data.context.store.id)
-                }
-
-                if (data.user) {
-                    sessionStorage.setItem('user_id', data.user.id)
-                    sessionStorage.setItem('user_role', String(data.user.role))
-                    if (data.user.name) sessionStorage.setItem('user_name', data.user.name)
-                }
-
-                if (data.context) {
-                    if (data.context.customer?.id) sessionStorage.setItem('customer_id', data.context.customer.id)
-                    if (data.context.branch?.id) sessionStorage.setItem('branch_id', data.context.branch.id)
-                }
+                sessionStorage.setItem('user_role', String(data.user.role))
 
                 // Redirect based on role
                 const role = Number(data.user.role)

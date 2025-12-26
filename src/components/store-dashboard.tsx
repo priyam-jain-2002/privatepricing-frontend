@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import { Users, Package, Tag, LogOut, Loader2, User } from "lucide-react"
 import { useState, useEffect } from "react"
-import { fetchStores, fetchCustomers, fetchProducts, createCustomer, createUser, updateUser } from "@/lib/api"
+import { fetchStores, fetchCustomers, fetchProducts, createCustomer, createUser, updateUser, getUserFromToken } from "@/lib/api"
 
 const menuItems = [
   { icon: Users, label: "Customers", id: "customers" },
@@ -258,7 +258,8 @@ export function StoreDashboard() {
                     const formData = new FormData(form);
                     const password = formData.get('password') as string;
                     const name = formData.get('name') as string;
-                    const userId = sessionStorage.getItem('user_id');
+                    const user = getUserFromToken();
+                    const userId = user?.id;
 
                     if (!userId) return;
 
@@ -276,7 +277,7 @@ export function StoreDashboard() {
                   }} className="space-y-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Display Name</label>
-                      <Input name="name" placeholder="John Doe" defaultValue={sessionStorage.getItem('user_name') || ''} />
+                      <Input name="name" placeholder="John Doe" defaultValue={getUserFromToken()?.name || ''} />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">New Password</label>

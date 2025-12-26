@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { fetchAPI } from "@/lib/api"
+import { fetchAPI, getUserFromToken } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 interface Product {
@@ -60,63 +60,53 @@ export function CustomerStorefront() {
 
   // Initialization: Check Session & Fetch Store Info (optional if we have storeId from session)
   useEffect(() => {
+
     async function init() {
-      // 1. Check Session
+      // 1. Check Session & Decode Token
       const token = sessionStorage.getItem('access_token')
-      if (!token) {
+      const decodedUser = getUserFromToken()
+
+      if (!token || !decodedUser) {
         router.push('/')
         return
       }
 
       setAccessToken(token)
 
-      // Rehydrate State from Session
-      const storedStoreId = sessionStorage.getItem('store_id')
-      const userId = sessionStorage.getItem('user_id')
-      const userRole = sessionStorage.getItem('user_role')
-      const userName = sessionStorage.getItem('user_name')
-      const customerId = sessionStorage.getItem('customer_id')
-      const branchId = sessionStorage.getItem('branch_id')
+      const { storeId: tokStoreId, id: userId, role: userRole, email, customerId, branchId } = decodedUser;
 
-      if (storedStoreId) setStoreId(storedStoreId)
+      if (tokStoreId) setStoreId(tokStoreId)
 
-      if (userId && userRole) {
+      if (userId && userRole !== undefined) {
         setUser({
           id: userId,
-          email: '', // Email not stored in session currently, simpler to verify token validity via API if needed
+          email: email || '',
           role: Number(userRole),
-          name: userName || undefined
+          name: decodedUser.name // Assuming name is in token or we might miss it if not added to payload
         })
       }
 
       setAuthContext({
-        store: storedStoreId ? { id: storedStoreId } : undefined,
+        store: tokStoreId ? { id: tokStoreId } : undefined,
         customer: customerId ? { id: customerId } : undefined,
         branch: branchId ? { id: branchId } : undefined
       })
 
-      // 2. Fetch Store Info for display (User might have bookmarked /storefront)
-      // If we have storeId, we can fetch specific store, otherwise fetch all?
-      // For now, let's try to fetch store details if we have an ID, or default to generic logic
+      // 2. Fetch Store Info
       try {
-        if (storedStoreId) {
-          // TODO: Ideally we should have an endpoint to get store by ID or just use what we have
+        if (tokStoreId) {
           const stores = await fetchAPI('/stores', {
             headers: { Authorization: `Bearer ${token}` }
-          }) // Fallback to list
-          const currentStore = stores.find((s: any) => s.id === storedStoreId)
+          })
+          const currentStore = stores.find((s: any) => s.id === tokStoreId)
           if (currentStore) {
             setStoreName(currentStore.name)
           }
         } else {
-          // Fallback if somehow storeId is missing but token exists (broken state)
-          setError("Session invalid. Please login again.")
-          sessionStorage.clear()
-          router.push('/')
+          // ...
         }
       } catch (err: any) {
         console.error("Failed to fetch store info", err)
-        // Ensure we don't lock user out if just store name fails
       } finally {
         setLoading(false)
       }
