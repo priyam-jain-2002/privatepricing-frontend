@@ -6,16 +6,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { fetchAPI } from "@/lib/api"
+import { loginStorefront } from "@/lib/api"
 import { Loader2 } from "lucide-react"
 
-interface LoginPageProps {
+interface StorefrontLoginPageProps {
     storeName?: string
+    storeId: string // Storefront login MUST know the store context
 }
 
-export function LoginPage({ storeName = "Private Pricing OS" }: LoginPageProps) {
+export function StorefrontLoginPage({ storeName = "Customer Portal", storeId }: StorefrontLoginPageProps) {
     const router = useRouter()
-    const [storeId, setStoreId] = useState("")
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [loading, setLoading] = useState(false)
@@ -27,25 +27,27 @@ export function LoginPage({ storeName = "Private Pricing OS" }: LoginPageProps) 
         setError(null)
 
         try {
-            // Login to get JWT
-            const data = await fetchAPI(`/users/login`, {
-                method: 'POST',
-                body: JSON.stringify({ email, password })
+            const data = await loginStorefront({
+                storeId,
+                email,
+                password
             })
 
-            // Expecting { accessToken: string, user: ... }
             if (data && data.accessToken) {
-                // Store in Session Storage
                 sessionStorage.setItem('access_token', data.accessToken)
-                sessionStorage.setItem('user_role', String(data.user.role))
 
-                // Base Login is strictly for Dashboard access (Owner/Staff)
-                router.push('/dashboard')
+                if (data.redirect) {
+                    // Backend is telling us where to go (e.g. Admin -> Dashboard)
+                    router.push(data.redirect)
+                } else {
+                    // Default Customer Flow
+                    router.push('/storefront')
+                }
             } else {
-                setError("Invalid response from server.")
+                setError("Invalid credentials.")
             }
         } catch (err: any) {
-            setError(err.message || "Failed to login. Please check your credentials.")
+            setError("Failed to login. Please check your credentials.")
         } finally {
             setLoading(false)
         }
@@ -56,10 +58,10 @@ export function LoginPage({ storeName = "Private Pricing OS" }: LoginPageProps) 
             <Card className="max-w-md w-full shadow-lg border-gray-100">
                 <CardHeader className="space-y-1 text-center">
                     <CardTitle className="text-2xl font-bold tracking-tight">
-                        Welcome to {storeName}
+                        {storeName}
                     </CardTitle>
                     <CardDescription>
-                        Enter your credentials to access your exclusive pricing.
+                        Access your customer account or store dashboard.
                     </CardDescription>
                 </CardHeader>
                 <form onSubmit={handleSubmit}>
@@ -69,7 +71,7 @@ export function LoginPage({ storeName = "Private Pricing OS" }: LoginPageProps) 
                             <Input
                                 id="email"
                                 type="email"
-                                placeholder="you@company.com"
+                                placeholder="name@example.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
@@ -94,7 +96,7 @@ export function LoginPage({ storeName = "Private Pricing OS" }: LoginPageProps) 
                             </div>
                         )}
                     </CardContent>
-                    <CardFooter className="flex flex-col gap-4">
+                    <CardFooter>
                         <Button
                             type="submit"
                             className="w-full h-11 text-base bg-blue-600 hover:bg-blue-700 font-medium"
@@ -103,10 +105,10 @@ export function LoginPage({ storeName = "Private Pricing OS" }: LoginPageProps) 
                             {loading ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Verifying Access...
+                                    Signing in...
                                 </>
                             ) : (
-                                "Access Store"
+                                "Sign In"
                             )}
                         </Button>
                     </CardFooter>

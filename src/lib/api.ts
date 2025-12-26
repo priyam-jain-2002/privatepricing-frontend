@@ -56,6 +56,10 @@ export async function fetchStores() {
     return fetchAPI('/stores', { headers: getAuthHeaders() });
 }
 
+export async function fetchStoreBySubdomain(subdomain: string) {
+    return fetchAPI(`/stores/subdomain/${subdomain}`);
+}
+
 // fetchCustomers(storeId) -> no longer needs storeId
 export async function fetchCustomers() {
     return fetchAPI(`/customers`, { headers: getAuthHeaders() });
@@ -86,5 +90,32 @@ export async function updateUser(userId: string, data: any) {
         method: 'PUT',
         body: JSON.stringify(data),
         headers: getAuthHeaders()
+    });
+}
+
+export async function fetchBranches(customerId: string) {
+    return fetchAPI(`/customers/${customerId}/branches`, { headers: getAuthHeaders() });
+}
+
+export async function createBranch(customerId: string, data: any) {
+    return fetchAPI(`/customers/${customerId}/branches`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: getAuthHeaders()
+    });
+}
+
+export async function fetchBranchUsers(customerId: string, branchId: string) {
+    return fetchAPI(`/customers/${customerId}/branches/${branchId}/users`, { headers: getAuthHeaders() });
+}
+
+export async function fetchOrders() {
+    return fetchAPI(`/orders`, { headers: getAuthHeaders() });
+}
+
+export async function loginStorefront(data: any) {
+    return fetchAPI('/storefront/login', {
+        method: 'POST',
+        body: JSON.stringify(data)
     });
 }
