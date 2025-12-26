@@ -1,15 +1,17 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Users, Package, Settings, LogOut, Loader2 } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Users, Package, Tag, LogOut, Loader2, User } from "lucide-react"
 import { useState, useEffect } from "react"
-import { fetchStores, fetchCustomers, fetchProducts } from "../../lib/api"
+import { fetchStores, fetchCustomers, fetchProducts, createCustomer, createUser, updateUser } from "@/lib/api"
 
 const menuItems = [
   { icon: Users, label: "Customers", id: "customers" },
   { icon: Package, label: "Products", id: "products" },
-  { icon: Settings, label: "Pricing", id: "pricing" },
+  { icon: Tag, label: "Pricing", id: "pricing" },
+  { icon: User, label: "Profile", id: "profile" },
 ]
 
 export function StoreDashboard() {
@@ -44,10 +46,10 @@ export function StoreDashboard() {
       setLoading(true)
       try {
         if (activeMenu === "customers") {
-          const data = await fetchCustomers(activeStore.id)
+          const data = await fetchCustomers()
           setCustomers(data)
         } else if (activeMenu === "products") {
-          const data = await fetchProducts(activeStore.id)
+          const data = await fetchProducts()
           setProducts(data)
         }
       } catch (error) {
@@ -116,36 +118,90 @@ export function StoreDashboard() {
 
           {/* Customers View */}
           {activeMenu === "customers" && (
-            <Card className="border border-gray-200 bg-white shadow-none">
-              <div className="overflow-hidden">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 bg-gray-50">
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Company Name</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Email</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Phone</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {customers.length === 0 ? (
-                      <tr><td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">No customers found.</td></tr>
-                    ) : customers.map((customer) => (
-                      <tr key={customer.id} className="border-b border-gray-100 last:border-0">
-                        <td className="px-6 py-4 text-sm text-gray-900">{customer.name}</td>
-                        <td className="px-6 py-4 text-sm text-gray-600">{customer.email || "-"}</td>
-                        <td className="px-6 py-4 text-sm text-gray-600">{customer.phone || "-"}</td>
-                        <td className="px-6 py-4 text-sm">
-                          <Button variant="ghost" size="sm" className="text-blue-600">
-                            Manage Pricing
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div className="space-y-6">
+              {/* Create Customer Form */}
+              <div className="bg-white p-6 rounded-lg border border-gray-200">
+                <h3 className="text-lg font-medium mb-4">Add New Customer</h3>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  const form = e.target as HTMLFormElement;
+                  const formData = new FormData(form);
+                  const name = formData.get('name') as string;
+                  const email = formData.get('email') as string;
+                  const password = formData.get('password') as string;
+
+                  if (!name || !email || !password) return;
+
+                  try {
+                    // 1. Create Customer Entity
+                    const customer = await createCustomer({ name, status: 'active' });
+
+                    // 2. Create User Entity
+                    await createUser({
+                      email,
+                      password,
+                      role: 1, // CUSTOMER_ADMIN
+                      storeId: activeStore.id,
+                      customerId: customer.id,
+                      name
+                    });
+
+                    // Refresh
+                    const data = await fetchCustomers();
+                    setCustomers(data);
+                    form.reset();
+                    alert("Customer created successfully!");
+                  } catch (err: any) {
+                    alert("Failed to create customer: " + err.message);
+                  }
+                }} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Company Name</label>
+                    <Input name="name" required placeholder="Acme Corp" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Admin Email</label>
+                    <Input name="email" type="email" required placeholder="admin@acme.com" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Admin Password</label>
+                    <Input name="password" type="password" required placeholder="Secret123" minLength={8} />
+                  </div>
+                  <Button type="submit">Create Customer</Button>
+                </form>
               </div>
-            </Card>
+
+              <Card className="border border-gray-200 bg-white shadow-none">
+                <div className="overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200 bg-gray-50">
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Company Name</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Email</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Phone</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {customers.length === 0 ? (
+                        <tr><td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">No customers found.</td></tr>
+                      ) : customers.map((customer) => (
+                        <tr key={customer.id} className="border-b border-gray-100 last:border-0">
+                          <td className="px-6 py-4 text-sm text-gray-900">{customer.name}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{customer.email || "-"}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{customer.phone || "-"}</td>
+                          <td className="px-6 py-4 text-sm">
+                            <Button variant="ghost" size="sm" className="text-blue-600">
+                              Manage Pricing
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
           )}
 
           {/* Products View */}
@@ -184,6 +240,52 @@ export function StoreDashboard() {
               <div className="text-center text-gray-500">
                 <p>Select a customer from the Customers section to manage their pricing</p>
               </div>
+            </div>
+          )}
+
+          {/* Settings / Profile View */}
+          {activeMenu === "profile" && (
+            <div className="max-w-2xl">
+              <Card className="border border-gray-200 bg-white shadow-none">
+                <CardHeader>
+                  <CardTitle>Profile Settings</CardTitle>
+                  <CardDescription>Update your personal information and password.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    const form = e.target as HTMLFormElement;
+                    const formData = new FormData(form);
+                    const password = formData.get('password') as string;
+                    const name = formData.get('name') as string;
+                    const userId = sessionStorage.getItem('user_id');
+
+                    if (!userId) return;
+
+                    try {
+                      const payload: any = {};
+                      if (password) payload.password = password;
+                      if (name) payload.name = name;
+
+                      await updateUser(userId, payload);
+                      alert("Profile updated successfully!");
+                      form.reset();
+                    } catch (err: any) {
+                      alert("Failed to update profile: " + err.message);
+                    }
+                  }} className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Display Name</label>
+                      <Input name="name" placeholder="John Doe" defaultValue={sessionStorage.getItem('user_name') || ''} />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">New Password</label>
+                      <Input name="password" type="password" placeholder="Leave empty to keep current" minLength={8} />
+                    </div>
+                    <Button type="submit">Save Changes</Button>
+                  </form>
+                </CardContent>
+              </Card>
             </div>
           )}
         </div>
