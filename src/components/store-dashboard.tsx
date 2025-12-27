@@ -9,6 +9,7 @@ import { Users, Package, Tag, LogOut, Loader2, User, ChevronLeft, ArrowLeft, Sho
 import { useState, useEffect } from "react"
 import { fetchStores, fetchCustomers, fetchProducts, createCustomer, createUser, createCustomerUser, updateCustomerUser, updateUser, getUserFromToken, fetchBranches, createBranch, fetchBranchUsers, fetchCustomerUsers, fetchAllOrders, updateOrderStatus, updateProductPricing, createProduct, updateProduct } from "@/lib/api"
 import { CustomerPricingManagement } from "./customer-pricing-management"
+import { OrderInvoiceDialog } from "./order-invoice-dialog"
 
 const menuItems = [
   { icon: ShoppingCart, label: "Orders", id: "orders" },
@@ -42,6 +43,9 @@ export function StoreDashboard() {
   // Product Management State
   const [isAddProductOpen, setIsAddProductOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<any>(null) // For editing name/sku
+
+  // Invoice State
+  const [viewingInvoice, setViewingInvoice] = useState<any>(null)
 
   useEffect(() => {
     async function init() {
@@ -277,19 +281,7 @@ export function StoreDashboard() {
           })}
         </nav>
 
-        <div className="absolute bottom-6 left-6 right-6">
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-gray-600 hover:bg-gray-100"
-            onClick={() => {
-              sessionStorage.clear();
-              window.location.href = '/auth/login';
-            }}
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-          </Button>
-        </div>
+
       </div>
 
       {/* Main Content */}
@@ -647,13 +639,17 @@ export function StoreDashboard() {
                       {orders.filter(o => showCompletedOrders ? (o.status === 'completed' || o.status === 'cancelled') : (o.status !== 'completed' && o.status !== 'cancelled')).length === 0 ? (
                         <tr><td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">No orders found.</td></tr>
                       ) : orders.filter(o => showCompletedOrders ? (o.status === 'completed' || o.status === 'cancelled') : (o.status !== 'completed' && o.status !== 'cancelled')).map((order) => (
-                        <tr key={order.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50 transition-colors">
+                        <tr
+                          key={order.id}
+                          className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50 transition-colors cursor-pointer"
+                          onClick={() => setViewingInvoice(order)}
+                        >
                           <td className="px-6 py-4 text-sm font-mono text-gray-900 font-semibold">#{order.orderNumber}</td>
                           <td className="px-6 py-4 text-sm text-gray-600">{new Date(order.createdAt).toLocaleDateString()}</td>
-                          <td className="px-6 py-4 text-sm font-medium text-gray-900">{order.customer?.name} <span className="text-gray-400 text-xs font-normal">({order.branch?.name})</span></td>
-                          <td className="px-6 py-4 text-sm text-gray-600">{order.placedByUser?.name}</td>
+                          <td className="px-6 py-4 text-sm font-medium text-gray-900">{order.customer?.name}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{order.placedByUser?.name || order.placedByCustomerUser?.name}</td>
                           <td className="px-6 py-4 text-sm font-medium text-gray-900">{order.currency} {order.totalAmount}</td>
-                          <td className="px-6 py-4 text-sm">
+                          <td className="px-6 py-4 text-sm" onClick={(e) => e.stopPropagation()}>
                             <select
                               className={`text-xs font-medium rounded-full px-2 py-1 border-0 ring-1 ring-inset focus:ring-2 
                               ${order.status === 'completed' ? 'bg-green-50 text-green-700 ring-green-600/20' :
@@ -684,6 +680,13 @@ export function StoreDashboard() {
                   </table>
                 </div>
               </Card>
+
+              {/* Invoice Dialog */}
+              <OrderInvoiceDialog
+                order={viewingInvoice}
+                open={!!viewingInvoice}
+                onOpenChange={(open) => !open && setViewingInvoice(null)}
+              />
             </div>
           )}
 
@@ -732,6 +735,20 @@ export function StoreDashboard() {
                   </form>
                 </CardContent>
               </Card>
+
+
+              <div className="mt-8 pt-8 border-t border-gray-200">
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    sessionStorage.clear();
+                    window.location.href = '/auth/login';
+                  }}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
+                </Button>
+              </div>
             </div>
           )}
         </div>
