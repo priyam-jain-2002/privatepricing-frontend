@@ -208,3 +208,7 @@ export async function createStorefrontOrder(storeId: string, customerId: string,
         });
     }
 }
+
+export async function fetchStorefrontOrders(customerId: string) {
+    return fetchAPI(`/storefront/customers/${customerId}/orders`, { headers: getAuthHeaders() });
+}
