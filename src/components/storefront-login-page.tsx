@@ -34,11 +34,18 @@ export function StorefrontLoginPage({ storeName = "Customer Portal", storeId }: 
             })
 
             if (data && data.accessToken) {
+                // Store in Session Storage
                 sessionStorage.setItem('access_token', data.accessToken)
 
+                // Keep role as string for consistency
+                const roleNum = typeof data.user?.role === 'number' ? data.user.role : Number(data.user?.role);
+                sessionStorage.setItem('user_role', String(roleNum));
+
                 if (data.redirect) {
-                    // Backend is telling us where to go (e.g. Admin -> Dashboard)
                     router.push(data.redirect)
+                } else if (roleNum === 0) {
+                    // Explicit Store Owner Redirection
+                    router.push('/dashboard')
                 } else {
                     // Default Customer Flow
                     router.push('/storefront')

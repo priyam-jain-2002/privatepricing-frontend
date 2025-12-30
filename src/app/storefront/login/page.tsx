@@ -17,13 +17,10 @@ export default function StorefrontLoginRoute() {
             const role = sessionStorage.getItem('user_role');
 
             if (token) {
-                if (role && Number(role) === 0) {
+                const roleNum = Number(role);
+                // Safe check for Store Owner (0)
+                if (!isNaN(roleNum) && roleNum === 0) {
                     // Owner logged in, go to dashboard
-                    // But dashboard is on a different subdomain potentially?
-                    // Dashboard is supported on subdomains too now via middleware/rewrite preservation?
-                    // Actually, next.config rewrites / -> /storefront on subdomain.
-                    // /dashboard is NOT rewritten. So it should work.
-                    // However, if we are on 'firstly.localhost', /dashboard works.
                     window.location.href = '/dashboard';
                     return;
                 } else {

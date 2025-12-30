@@ -15,7 +15,9 @@ export default function StorefrontPage() {
     const role = sessionStorage.getItem('user_role')
 
     if (token && role) {
-      if (Number(role) === 0) {
+      const roleNum = Number(role);
+      // Role 0 is Store Owner
+      if (!isNaN(roleNum) && roleNum === 0) {
         router.push('/dashboard')
       } else {
         router.push('/storefront')

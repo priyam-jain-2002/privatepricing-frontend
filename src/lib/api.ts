@@ -61,6 +61,14 @@ export async function fetchStoreBySubdomain(subdomain: string) {
     return fetchAPI(`/stores/subdomain/${subdomain}`);
 }
 
+export async function updateStore(storeId: string, data: any) {
+    return fetchAPI(`/stores/${storeId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+        headers: getAuthHeaders()
+    });
+}
+
 // fetchCustomers(storeId) -> no longer needs storeId
 export async function fetchCustomers() {
     return fetchAPI(`/customers`, { headers: getAuthHeaders() });

@@ -70,7 +70,7 @@ export function CustomerPricingManagement({ storeId, customerId }: CustomerPrici
         storeId,
         customerId,
         productId: product.id,
-        priceOverride: null, // Default: no override
+        sellingPrice: null, // Default: no override
         profitMarginPercent: null
       })
 
@@ -129,9 +129,9 @@ export function CustomerPricingManagement({ storeId, customerId }: CustomerPrici
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Product</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Base Price (Global)</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Cost Price</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Strategy</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Value / Result</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Selling Price</th>
                 <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">Visible</th>
                 <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
               </tr>
@@ -218,19 +218,35 @@ function PricingRow({ product, initialPricing, onSave, savingId }: { product: an
   if (!product) return null // Safety check
 
   const [pricingType, setPricingType] = useState(initialPricing?.pricingType || 'fixed')
-  const [priceOverride, setPriceOverride] = useState(initialPricing?.priceOverride ?? '')
+  const [sellingPrice, setSellingPrice] = useState(initialPricing?.sellingPrice ?? '')
   const [profitMarginPercent, setProfitMarginPercent] = useState(initialPricing?.profitMarginPercent ?? '')
   const [visible, setVisible] = useState(initialPricing?.visible ?? true)
   const [isDirty, setIsDirty] = useState(false)
 
   // Sync state when initialPricing changes (e.g. after save)
+  // Sync state when initialPricing changes (e.g. after save)
   useEffect(() => {
     setPricingType(initialPricing?.pricingType || 'fixed')
-    setPriceOverride(initialPricing?.priceOverride ?? '')
     setProfitMarginPercent(initialPricing?.profitMarginPercent ?? '')
     setVisible(initialPricing?.visible ?? true)
     setIsDirty(false)
-  }, [initialPricing])
+
+    // Handle sellingPrice: Use stored value if available, otherwise calculate from margin (legacy support)
+    if (initialPricing?.sellingPrice) {
+      setSellingPrice(initialPricing.sellingPrice)
+    } else if (initialPricing?.pricingType === 'profit_margin' && initialPricing?.profitMarginPercent) {
+      // Fallback for legacy records: calculate dynamically for display
+      const cost = parseFloat(product.costPrice) || 0;
+      const margin = parseFloat(initialPricing.profitMarginPercent);
+      if (!isNaN(cost) && !isNaN(margin)) {
+        setSellingPrice((cost * (1 + margin / 100)).toFixed(2))
+      } else {
+        setSellingPrice('')
+      }
+    } else {
+      setSellingPrice('')
+    }
+  }, [initialPricing, product.costPrice])
 
   const handleSave = () => {
     const updates: any = {
@@ -238,11 +254,13 @@ function PricingRow({ product, initialPricing, onSave, savingId }: { product: an
       visible
     }
     if (pricingType === 'fixed') {
-      updates.priceOverride = priceOverride === '' ? null : parseFloat(priceOverride)
+      updates.sellingPrice = sellingPrice === '' ? null : parseFloat(sellingPrice)
       updates.profitMarginPercent = null
     } else {
-      updates.profitMarginPercent = profitMarginPercent === '' ? null : parseFloat(profitMarginPercent)
-      updates.priceOverride = null
+      const margin = profitMarginPercent === '' ? null : parseFloat(profitMarginPercent);
+      updates.profitMarginPercent = margin;
+      // We send the sellingPrice that is currently in state (calculated or loaded)
+      updates.sellingPrice = sellingPrice === '' ? null : parseFloat(sellingPrice)
     }
     onSave(updates)
   }
@@ -250,6 +268,24 @@ function PricingRow({ product, initialPricing, onSave, savingId }: { product: an
   const handleChange = (setter: any, value: any) => {
     setter(value)
     setIsDirty(true)
+  }
+
+  const handleMarginChange = (value: string) => {
+    setProfitMarginPercent(value);
+    setIsDirty(true);
+    if (value === '' || isNaN(parseFloat(value))) {
+      // If clearing margin, keep price? Or clear? 
+      // Let's keep price or maybe revert to default? 
+      // Better to perhaps do nothing to price or clear it? 
+      // If logic is "Margin drives Price", then no margin = no calculated price.
+      // But we want to preserve "Stored Price". 
+      // Let's leaves sellingPrice as is if invalid, OR recalculate if valid.
+      return;
+    }
+    const margin = parseFloat(value);
+    const cost = parseFloat(product.costPrice) || 0;
+    const newPrice = (cost * (1 + margin / 100)).toFixed(2);
+    setSellingPrice(newPrice);
   }
 
   const isSaving = savingId === product.id
@@ -261,7 +297,7 @@ function PricingRow({ product, initialPricing, onSave, savingId }: { product: an
         <div className="text-xs text-gray-500">{product.sku}</div>
       </td>
       <td className="px-6 py-4 text-sm text-gray-600">
-        ₹ {product.basePrice}
+        ₹ {product.costPrice || 0}
       </td>
       <td className="px-6 py-4 text-sm">
         <select
@@ -282,12 +318,12 @@ function PricingRow({ product, initialPricing, onSave, savingId }: { product: an
                 className="h-8 w-20 text-xs"
                 placeholder="%"
                 value={profitMarginPercent}
-                onChange={(e) => handleChange(setProfitMarginPercent, e.target.value)}
+                onChange={(e) => handleMarginChange(e.target.value)}
               />
               <span className="text-xs text-gray-500">%</span>
               <span className="text-gray-400 text-xs ml-2">→</span>
               <span className="text-sm font-medium text-gray-900 ml-1">
-                ₹ {(product.basePrice * (1 + (parseFloat(profitMarginPercent) || 0) / 100)).toFixed(2)}
+                ₹ {sellingPrice}
               </span>
             </>
           ) : (
@@ -296,9 +332,9 @@ function PricingRow({ product, initialPricing, onSave, savingId }: { product: an
               <Input
                 type="number"
                 className="h-8 w-24 text-right"
-                placeholder={product.basePrice.toString()}
-                value={priceOverride}
-                onChange={(e) => handleChange(setPriceOverride, e.target.value)}
+                placeholder={(product.costPrice || 0).toString()}
+                value={sellingPrice}
+                onChange={(e) => handleChange(setSellingPrice, e.target.value)}
               />
             </>
           )}

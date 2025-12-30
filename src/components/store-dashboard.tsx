@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Users, Package, Tag, LogOut, Loader2, User, ChevronLeft, ArrowLeft, ShoppingCart, Check, X, Plus, History, Edit2, ExternalLink } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Users, Package, Tag, LogOut, Loader2, User, ChevronLeft, ArrowLeft, ShoppingCart, Check, X, Plus, History, Edit2, ExternalLink, Settings, Info } from "lucide-react"
 import { useState, useEffect } from "react"
-import { fetchStores, fetchCustomers, fetchProducts, createCustomer, createUser, createCustomerUser, updateCustomerUser, updateUser, getUserFromToken, fetchBranches, createBranch, fetchBranchUsers, fetchCustomerUsers, fetchAllOrders, updateOrderStatus, updateProductPricing, createProduct, updateProduct } from "@/lib/api"
+import { fetchStores, fetchCustomers, fetchProducts, createCustomer, createUser, createCustomerUser, updateCustomerUser, updateUser, getUserFromToken, fetchBranches, createBranch, fetchBranchUsers, fetchCustomerUsers, fetchAllOrders, updateOrderStatus, updateProductPricing, createProduct, updateProduct, updateStore } from "@/lib/api"
 import { CustomerPricingManagement } from "./customer-pricing-management"
 import { OrderInvoiceDialog } from "./order-invoice-dialog"
 
@@ -495,7 +496,22 @@ export function StoreDashboard() {
           {/* Products View */}
           {activeMenu === "products" && (
             <div className="space-y-4">
-              <div className="flex justify-end">
+              <OperationCostDialog
+                store={activeStore}
+                onUpdate={(newPercentage) => {
+                  const updatedStore = { ...activeStore, operationCostPercentage: newPercentage };
+                  const updatedStores = stores.map(s => s.id === activeStore.id ? updatedStore : s);
+                  setStores(updatedStores);
+                  setActiveStore(updatedStore);
+                }}
+              />
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" onClick={() => document.getElementById('operation-cost-trigger')?.click()}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Operation Cost ({activeStore?.operationCostPercentage || 10}%)
+                  </Button>
+                </div>
                 <Button onClick={() => setIsAddProductOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" /> Add Product
                 </Button>
@@ -522,7 +538,7 @@ export function StoreDashboard() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Base Freight</label>
+                      <label className="text-sm font-medium">Incoming Freight</label>
                       <Input name="baseFreight" type="number" step="0.01" min="0" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -573,15 +589,30 @@ export function StoreDashboard() {
                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Product Name</th>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">SKU</th>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Base Price (Global)</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Base Freight</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Incoming Freight</th>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">CGST %</th>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">SGST %</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-1 cursor-help">
+                                  Cost Price
+                                  <Info className="h-4 w-4 text-gray-400" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Formula: Base Price + Incoming Freight + (Base Price * Operations Cost %)</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </th>
                         <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {products.length === 0 ? (
-                        <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">No products found.</td></tr>
+                        <tr><td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500">No products found.</td></tr>
                       ) : products.map((product) => (
                         <ProductRow
                           key={product.id}
@@ -591,12 +622,14 @@ export function StoreDashboard() {
                             setProducts(data)
                           }}
                           onEditDetails={() => setEditingProduct(product)}
+                          operationCostPercentage={activeStore?.operationCostPercentage || 0}
                         />
                       ))}
                     </tbody>
                   </table>
                 </div>
               </Card>
+              <p className="text-sm text-gray-500 italic mt-2">* Cost Price includes operations cost</p>
             </div>
           )}
 
@@ -752,13 +785,13 @@ export function StoreDashboard() {
             </div>
           )}
         </div>
-      </div>
+      </div >
     </div >
   )
 
 }
 
-function ProductRow({ product, onUpdate, onEditDetails }: { product: any, onUpdate: () => void, onEditDetails: () => void }) {
+function ProductRow({ product, onUpdate, onEditDetails, operationCostPercentage }: { product: any, onUpdate: () => void, onEditDetails: () => void, operationCostPercentage: number }) {
   const [basePrice, setBasePrice] = useState(product.basePrice || '')
   const [baseFreight, setBaseFreight] = useState(product.baseFreight || '')
   const [cgst, setCgst] = useState(product.cgst || '')
@@ -767,9 +800,12 @@ function ProductRow({ product, onUpdate, onEditDetails }: { product: any, onUpda
 
   const handleSave = async () => {
     try {
+      const calculatedCostPrice = (parseFloat(basePrice || '0') + parseFloat(baseFreight || '0') + (parseFloat(basePrice || '0') * (operationCostPercentage / 100)))
+
       await updateProductPricing(product.id, {
         basePrice: parseFloat(basePrice),
         baseFreight: parseFloat(baseFreight || '0'),
+        costPrice: parseFloat(calculatedCostPrice.toFixed(2)),
         cgst: parseFloat(cgst || '0'),
         sgst: parseFloat(sgst || '0')
       })
@@ -848,6 +884,9 @@ function ProductRow({ product, onUpdate, onEditDetails }: { product: any, onUpda
           </span>
         )}
       </td>
+      <td className="px-6 py-4 text-sm text-gray-600 font-medium" title={`Formula: Base Price + Incoming Freight + (Base Price * ${operationCostPercentage}%)`}>
+        {product.currency || 'INR'} {(parseFloat(basePrice || '0') + parseFloat(baseFreight || '0') + (parseFloat(basePrice || '0') * (operationCostPercentage / 100))).toFixed(2)}
+      </td>
       <td className="px-6 py-4 text-sm text-right">
         {isEditing ? (
           <div className="flex justify-end gap-2">
@@ -855,9 +894,63 @@ function ProductRow({ product, onUpdate, onEditDetails }: { product: any, onUpda
             <Button size="sm" onClick={handleSave}><Check className="h-4 w-4" /></Button>
           </div>
         ) : (
-          <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>Edit Price</Button>
+          <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>Edit</Button>
         )}
       </td>
     </tr>
+  )
+}
+
+function OperationCostDialog({ store, onUpdate }: { store: any, onUpdate: (val: number) => void }) {
+  const [open, setOpen] = useState(false)
+  const [cost, setCost] = useState(store?.operationCostPercentage || '')
+
+  // Update local state when store changes
+  useEffect(() => {
+    if (store) {
+      setCost(store.operationCostPercentage || 10)
+    }
+  }, [store])
+
+  const handleSave = async () => {
+    if (!store) return
+    try {
+      const updatedStore = await updateStore(store.id, { operationCostPercentage: parseFloat(cost) })
+      onUpdate(updatedStore.operationCostPercentage)
+      toast.success("Operation cost updated successfully")
+      setOpen(false)
+    } catch (err: any) {
+      toast.error("Failed to update: " + err.message)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <button id="operation-cost-trigger" className="hidden" onClick={() => setOpen(true)} />
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Store Operation Cost</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Operation Cost Percentage (%)</label>
+            <p className="text-sm text-gray-500">
+              what is your operation cost in percentage
+            </p>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={cost}
+              onChange={(e) => setCost(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave}>Save Changes</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
