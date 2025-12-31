@@ -23,16 +23,24 @@ export default function StorefrontPage() {
     } else {
       // 2. Not logged in - check for subdomain
       const hostname = window.location.hostname;
-      // Heuristic: 
-      // - 'localhost' -> Root
-      // - '*.localhost' -> Subdomain
-      // - '*.domain.com' -> Subdomain (parts > 2)
-      // - 'domain.com' -> Root
-      const isLocalhostRoot = hostname === 'localhost';
-      // For production, assume 2 parts is root (e.g. example.com). 
-      // Adjust if using a domain like co.uk or similiar in future.
+      const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost';
+
       const parts = hostname.split('.');
-      const isSubdomain = !isLocalhostRoot && (hostname.endsWith('.localhost') || parts.length > 2);
+      const rootParts = rootDomain.split('.');
+
+      // Heuristic:
+      // If hostname is exactly rootDomain (or localhost), it's root.
+      // If hostname ends with .rootDomain, it's a subdomain.
+
+      let isSubdomain = false;
+      if (hostname === rootDomain || hostname === 'localhost') {
+        isSubdomain = false;
+      } else if (hostname.endsWith(`.${rootDomain}`)) {
+        isSubdomain = true;
+      } else {
+        // Fallback for cases like 'sub.localhost' when rootDomain is 'localhost'
+        isSubdomain = parts.length > rootParts.length;
+      }
 
       if (isSubdomain) {
         router.push('/storefront/login');

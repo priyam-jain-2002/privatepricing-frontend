@@ -36,15 +36,28 @@ export default function StorefrontLoginRoute() {
                 // 1. Try to get subdomain from hostname
                 const hostname = window.location.hostname;
                 const parts = hostname.split('.');
-
                 // Check for localhost or production domain structure
+                const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost';
                 const isLocalhost = hostname.includes('localhost');
-                const hasSubdomain = isLocalhost ? parts.length > 1 : parts.length > 2;
 
-                if (isLocalhost ? parts.length > 1 : parts.length > 2) {
+                let hasSubdomain = false;
+                let subdomain = '';
+
+                if (hostname === rootDomain || hostname === 'localhost') {
+                    hasSubdomain = false;
+                } else if (hostname.endsWith(`.${rootDomain}`)) {
+                    hasSubdomain = true;
+                    // Extract the part before .rootDomain
+                    subdomain = hostname.replace(`.${rootDomain}`, '');
+                } else if (isLocalhost) {
+                    // Fallback for sub.localhost
+                    hasSubdomain = parts.length > 1;
+                    if (hasSubdomain) subdomain = parts[0];
+                }
+
+                if (hasSubdomain && subdomain) {
                     // Check 'www'
-                    if (parts[0] !== 'www') {
-                        const subdomain = parts[0];
+                    if (subdomain !== 'www') {
                         console.log(`[Login] Detected subdomain: ${subdomain} from host: ${hostname}`);
                         try {
                             currentStore = await fetchStoreBySubdomain(subdomain);
