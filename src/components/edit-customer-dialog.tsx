@@ -7,13 +7,24 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useState, useEffect } from "react"
-import { AlertCircle, MapPin, Plus, Trash2 } from "lucide-react"
-import { updateCustomer, fetchBranches, createBranch } from "@/lib/api"
+import { AlertCircle, MapPin, Plus, Trash2, AlertTriangle } from "lucide-react"
+import { updateCustomer, fetchBranches, createBranch, createCustomer } from "@/lib/api"
 import { toast } from "sonner"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
-export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: { customer: any, open: boolean, onOpenChange: (open: boolean) => void, onUpdate: () => void }) {
+interface EditCustomerDialogProps {
+    customer: any | null
+    open: boolean
+    onOpenChange: (open: boolean) => void
+    onUpdate: () => void
+}
+
+export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: EditCustomerDialogProps) {
     const [loading, setLoading] = useState(false)
     const [freightType, setFreightType] = useState<'exclusive' | 'inclusive'>('exclusive')
+
+    // Local Customer State (to handle transition from Create -> Edit)
+    const [activeCustomer, setActiveCustomer] = useState<any>(null)
 
     // Branch State
     const [branches, setBranches] = useState<any[]>([])
@@ -22,15 +33,33 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: {
     const [isAddingBranch, setIsAddingBranch] = useState(false)
 
     useEffect(() => {
-        if (customer) {
-            setFreightType(customer.inclusiveFreightRate !== null ? 'inclusive' : 'exclusive')
-            loadBranches();
+        if (open) {
+            // If customer passed, use it. If null, we are in "Create Mode" (so initialize empty)
+            if (customer) {
+                setActiveCustomer(customer)
+                setFreightType(customer.inclusiveFreightRate !== null ? 'inclusive' : 'exclusive')
+                fetchBranches(customer.id).then(setBranches).catch(console.error)
+            } else {
+                setActiveCustomer({
+                    name: '',
+                    GSTIN: '',
+                    status: 'active',
+                    paymentTerms: null,
+                    deliveryTime: null,
+                    inclusiveFreightRate: null,
+                    isBillToSameAsShipTo: false,
+                    additionalTerms: ''
+                })
+                setFreightType('exclusive')
+                setBranches([])
+            }
         }
-    }, [customer])
+    }, [customer, open])
 
     const loadBranches = async () => {
+        if (!activeCustomer?.id) return
         try {
-            const data = await fetchBranches(customer.id);
+            const data = await fetchBranches(activeCustomer.id);
             setBranches(data);
         } catch (err) {
             console.error("Failed to load branches", err);
@@ -43,7 +72,7 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: {
             return;
         }
         try {
-            await createBranch(customer.id, { customerId: customer.id, name: newBranchName, address: newBranchAddress });
+            await createBranch(activeCustomer.id, { customerId: activeCustomer.id, name: newBranchName, address: newBranchAddress });
             toast.success("Branch added successfully");
             setNewBranchName('');
             setNewBranchAddress('');
@@ -56,7 +85,7 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!customer) return;
+        if (!activeCustomer) return;
 
         setLoading(true)
         const form = e.target as HTMLFormElement
@@ -76,26 +105,42 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: {
                 inclusiveFreightRate: inclusiveRate
             }
 
-            await updateCustomer(customer.id, payload)
-            toast.success("Customer updated successfully")
-            onUpdate()
-            onOpenChange(false)
+            if (activeCustomer.id) {
+                // Update
+                await updateCustomer(activeCustomer.id, payload)
+                toast.success("Customer updated successfully")
+                onUpdate()
+                onOpenChange(false)
+            } else {
+                // Create
+                const newCustomer = await createCustomer(payload)
+                toast.success("Customer created! You can now add branches.")
+                setActiveCustomer(newCustomer) // Switch to Edit Mode with new ID
+                onUpdate() // Refresh list background
+                // Keep dialog open
+            }
         } catch (err: any) {
-            toast.error("Failed to update customer: " + err.message)
+            toast.error("Failed to save customer: " + err.message)
         } finally {
             setLoading(false)
         }
     }
 
-    if (!customer) return null;
+    if (!open) return null; // Using open prop to control visibility
+    if (!activeCustomer) return null;
+
+    const isEditMode = !!activeCustomer.id;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Customer Settings</DialogTitle>
+                    <DialogTitle>{isEditMode ? 'Customer Settings' : 'Add New Customer'}</DialogTitle>
                     <DialogDescription>
-                        Configure global settings and terms for {customer.name}.
+                        {isEditMode
+                            ? `Configure global settings and terms for ${activeCustomer.name}.`
+                            : "Enter customer details to get started. You can add branches after creating."
+                        }
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -103,22 +148,22 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: {
                     <div className="rounded-lg border p-4 space-y-4">
                         <div className="flex items-center justify-between">
                             <h4 className="text-sm font-medium text-gray-900">Basic Details</h4>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${customer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                                {customer.status}
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${activeCustomer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                                {activeCustomer.status || 'Active'}
                             </span>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>Company Name</Label>
-                                <Input name="name" defaultValue={customer.name} required className="font-medium" />
+                                <Label>Company Name *</Label>
+                                <Input name="name" defaultValue={activeCustomer.name} required className="font-medium" placeholder="Acme Corp" />
                             </div>
                             <div className="space-y-2">
                                 <Label>GSTIN</Label>
-                                <Input name="GSTIN" defaultValue={customer.GSTIN || ''} />
+                                <Input name="GSTIN" defaultValue={activeCustomer.GSTIN || ''} placeholder="Optional" />
                             </div>
                             <div className="space-y-2">
                                 <Label>Status</Label>
-                                <Select name="status" defaultValue={customer.status}>
+                                <Select name="status" defaultValue={activeCustomer.status || 'active'}>
                                     <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>
@@ -134,7 +179,7 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: {
                     {/* Terms and Conditions */}
                     <div className="rounded-lg border p-4 space-y-4">
                         <h4 className="text-sm font-medium text-gray-900">Terms & Conditions</h4>
-                        {(!customer.deliveryTime || !customer.paymentTerms) && (
+                        {isEditMode && (!activeCustomer.deliveryTime || !activeCustomer.paymentTerms) && (
                             <div className="bg-amber-50 border border-amber-200 rounded-md p-3 flex items-start gap-2 text-amber-800 text-xs">
                                 <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                                 <div>
@@ -146,14 +191,14 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: {
                         <div className="grid grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <Label className="text-xs text-muted-foreground uppercase tracking-wider">Delivery Time (Days)</Label>
-                                <Input name="deliveryTime" type="number" min="0" placeholder="e.g. 7" defaultValue={customer.deliveryTime || ''} />
+                                <Input name="deliveryTime" type="number" min="0" placeholder="e.g. 7" defaultValue={activeCustomer.deliveryTime || ''} />
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-xs text-muted-foreground uppercase tracking-wider">Payment Terms (Days)</Label>
-                                <Input name="paymentTerms" type="number" min="0" placeholder="e.g. 30" defaultValue={customer.paymentTerms || ''} />
+                                <Input name="paymentTerms" type="number" min="0" placeholder="e.g. 30" defaultValue={activeCustomer.paymentTerms || ''} />
                             </div>
                             <div className="col-span-2 bg-gray-50 p-3 rounded-md border flex items-center gap-3">
-                                <Checkbox name="isBillToSameAsShipTo" defaultChecked={customer.isBillToSameAsShipTo} id="billTo" />
+                                <Checkbox name="isBillToSameAsShipTo" defaultChecked={activeCustomer.isBillToSameAsShipTo} id="billTo" />
                                 <div className="space-y-0.5">
                                     <Label htmlFor="billTo" className="cursor-pointer font-medium text-gray-900">Same Bill-To/Ship-To Address</Label>
                                     <p className="text-xs text-muted-foreground">Automatically copy shipping address to billing address for invoices.</p>
@@ -164,7 +209,7 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: {
                         <div className="pt-2">
                             <div className="space-y-2">
                                 <Label className="text-xs text-muted-foreground uppercase tracking-wider">Additional Terms</Label>
-                                <Textarea name="additionalTerms" placeholder="Enter specific contractual terms here..." defaultValue={customer.additionalTerms || ''} className="min-h-[80px] text-sm" />
+                                <Textarea name="additionalTerms" placeholder="Enter specific contractual terms here..." defaultValue={activeCustomer.additionalTerms || ''} className="min-h-[80px] text-sm" />
                             </div>
                         </div>
                     </div>
@@ -198,7 +243,7 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: {
                                             step="0.01"
                                             min="0"
                                             placeholder="5.00"
-                                            defaultValue={customer.inclusiveFreightRate || ''}
+                                            defaultValue={activeCustomer.inclusiveFreightRate || ''}
                                             required
                                             className="bg-white pr-8"
                                         />
@@ -207,16 +252,17 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: {
                                 </div>
                             )}
                         </div>
-                        {freightType === 'exclusive' && (
-                            <p className="text-xs text-muted-foreground">Freight will be calculated and added separately on invoices.</p>
-                        )}
-                        {freightType === 'inclusive' && (
-                            <p className="text-xs text-muted-foreground">Product prices will be treated as including this freight percentage.</p>
-                        )}
                     </div>
 
                     {/* Branch Management */}
-                    <div className="rounded-lg border p-4 space-y-4">
+                    <div className={isEditMode ? "rounded-lg border p-4 space-y-4" : "rounded-lg border p-4 space-y-4 opacity-50 pointer-events-none relative"}>
+                        {!isEditMode && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gray-50/50 z-10 backdrop-blur-[1px]">
+                                <div className="bg-white px-4 py-2 rounded-md shadow-sm border text-sm font-medium text-gray-600">
+                                    Create customer to manage branches
+                                </div>
+                            </div>
+                        )}
                         <div className="flex items-center justify-between">
                             <h4 className="text-sm font-medium text-gray-900">Branches</h4>
                             <Button type="button" size="sm" variant="outline" onClick={() => setIsAddingBranch(!isAddingBranch)}>
@@ -268,7 +314,9 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: {
 
                     <div className="flex justify-end gap-2 pt-4">
                         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-                        <Button type="submit" disabled={loading}>Save Changes</Button>
+                        <Button type="submit" disabled={loading}>
+                            {isEditMode ? "Save Changes" : "Create Customer"}
+                        </Button>
                     </div>
                 </form>
             </DialogContent>
