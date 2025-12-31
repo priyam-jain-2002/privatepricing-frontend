@@ -4,10 +4,14 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { useState, useEffect } from "react"
 import { fetchProducts, getCustomerPricings, createCustomerPricing, updateCustomerPricing } from "@/lib/api"
-import { Loader2, Save, Check, Plus, Search } from "lucide-react"
+import { Loader2, Save, Check, Plus, Search, Calendar as CalendarIcon } from "lucide-react"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { format } from "date-fns"
+import { cn } from "@/lib/utils"
 
 interface CustomerPricingManagementProps {
   storeId: string;
@@ -132,13 +136,14 @@ export function CustomerPricingManagement({ storeId, customerId }: CustomerPrici
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Cost Price</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Strategy</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Selling Price</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Valid Until</th>
                 <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">Visible</th>
                 <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
               </tr>
             </thead>
             <tbody>
               {customerPricings.length === 0 ? (
-                <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-500">No products assigned. Click "Add Product" to start.</td></tr>
+                <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-500">No products assigned. Click "Add Product" to start.</td></tr>
               ) : customerPricings.map((pricing) => (
                 <PricingRow
                   key={pricing.id}
@@ -221,7 +226,9 @@ function PricingRow({ product, initialPricing, onSave, savingId }: { product: an
   const [sellingPrice, setSellingPrice] = useState(initialPricing?.sellingPrice ?? '')
   const [profitMarginPercent, setProfitMarginPercent] = useState(initialPricing?.profitMarginPercent ?? '')
   const [visible, setVisible] = useState(initialPricing?.visible ?? true)
+  const [effectiveTo, setEffectiveTo] = useState<Date | undefined>(initialPricing?.effectiveTo ? new Date(initialPricing.effectiveTo) : undefined)
   const [isDirty, setIsDirty] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   // Sync state when initialPricing changes (e.g. after save)
   // Sync state when initialPricing changes (e.g. after save)
@@ -229,6 +236,7 @@ function PricingRow({ product, initialPricing, onSave, savingId }: { product: an
     setPricingType(initialPricing?.pricingType || 'fixed')
     setProfitMarginPercent(initialPricing?.profitMarginPercent ?? '')
     setVisible(initialPricing?.visible ?? true)
+    setEffectiveTo(initialPricing?.effectiveTo ? new Date(initialPricing.effectiveTo) : undefined)
     setIsDirty(false)
 
     // Handle sellingPrice: Use stored value if available, otherwise calculate from margin (legacy support)
@@ -248,10 +256,24 @@ function PricingRow({ product, initialPricing, onSave, savingId }: { product: an
     }
   }, [initialPricing, product.costPrice])
 
-  const handleSave = () => {
+  const handleSaveAttempt = () => {
+    if (initialPricing?.effectiveTo) {
+      const validUntil = new Date(initialPricing.effectiveTo);
+      const now = new Date();
+      if (validUntil > now) {
+        setShowConfirm(true);
+        return;
+      }
+    }
+    proceedWithSave();
+  }
+
+  const proceedWithSave = () => {
+    setShowConfirm(false);
     const updates: any = {
       pricingType,
-      visible
+      visible,
+      effectiveTo: effectiveTo ? effectiveTo.toISOString() : null
     }
     if (pricingType === 'fixed') {
       updates.sellingPrice = sellingPrice === '' ? null : parseFloat(sellingPrice)
@@ -340,6 +362,37 @@ function PricingRow({ product, initialPricing, onSave, savingId }: { product: an
           )}
         </div>
       </td>
+      <td className="px-6 py-4 text-sm text-gray-600">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant={"outline"}
+              className={cn(
+                "w-[140px] pl-3 text-left font-normal h-8 text-xs",
+                !effectiveTo && "text-muted-foreground"
+              )}
+            >
+              {effectiveTo ? (
+                format(effectiveTo, "PPP")
+              ) : (
+                <span>Pick a date</span>
+              )}
+              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={effectiveTo}
+              onSelect={(date) => handleChange(setEffectiveTo, date)}
+              disabled={(date) =>
+                date < new Date("1900-01-01")
+              }
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </td>
       <td className="px-6 py-4 text-center">
         <button
           onClick={() => handleChange(setVisible, !visible)}
@@ -354,9 +407,26 @@ function PricingRow({ product, initialPricing, onSave, savingId }: { product: an
             <Loader2 className="h-4 w-4 animate-spin mr-1" /> Saving
           </Button>
         ) : isDirty ? (
-          <Button onClick={handleSave} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white h-7 text-xs">
-            <Save className="h-3 w-3 mr-1" /> Save
-          </Button>
+          <>
+            <Button onClick={handleSaveAttempt} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white h-7 text-xs">
+              <Save className="h-3 w-3 mr-1" /> Save
+            </Button>
+            <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Update Active Price?</DialogTitle>
+                  <DialogDescription>
+                    This pricing is valid until <strong>{initialPricing?.effectiveTo ? new Date(initialPricing.effectiveTo).toLocaleDateString() : ''}</strong>.
+                    Changing it now might affect agreements. Are you sure?
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowConfirm(false)}>Cancel</Button>
+                  <Button onClick={proceedWithSave}>Confirm Update</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
         ) : initialPricing ? (
           <span className="text-xs text-green-600 flex items-center justify-end gap-1 px-3 py-2">
             <Check className="h-3 w-3" /> Saved
