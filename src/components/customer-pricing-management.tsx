@@ -16,9 +16,10 @@ import { cn } from "@/lib/utils"
 interface CustomerPricingManagementProps {
   storeId: string;
   customerId: string;
+  customer: any;
 }
 
-export function CustomerPricingManagement({ storeId, customerId }: CustomerPricingManagementProps) {
+export function CustomerPricingManagement({ storeId, customerId, customer }: CustomerPricingManagementProps) {
   // Main List State
   const [customerPricings, setCustomerPricings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -118,7 +119,9 @@ export function CustomerPricingManagement({ storeId, customerId }: CustomerPrici
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold text-gray-900">Assigned Products</h2>
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Assigned Products</h2>
+        </div>
         <div className="flex gap-2">
           <Button onClick={loadCustomerData} variant="outline" size="sm">Refresh</Button>
           <Button onClick={openAddDialog} size="sm">
@@ -151,6 +154,7 @@ export function CustomerPricingManagement({ storeId, customerId }: CustomerPrici
                   initialPricing={pricing}
                   onSave={(updates) => handleUpdate(pricing.id, pricing.productId, updates)}
                   savingId={savingId}
+                  freightRate={customer.inclusiveFreightRate ? parseFloat(customer.inclusiveFreightRate) : 0}
                 />
               ))}
             </tbody>
@@ -219,7 +223,7 @@ export function CustomerPricingManagement({ storeId, customerId }: CustomerPrici
   )
 }
 
-function PricingRow({ product, initialPricing, onSave, savingId }: { product: any, initialPricing: any, onSave: (u: any) => void, savingId: string | null }) {
+function PricingRow({ product, initialPricing, onSave, savingId, freightRate }: { product: any, initialPricing: any, onSave: (u: any) => void, savingId: string | null, freightRate?: number }) {
   if (!product) return null // Safety check
 
   const [pricingType, setPricingType] = useState(initialPricing?.pricingType || 'fixed')
@@ -244,17 +248,22 @@ function PricingRow({ product, initialPricing, onSave, savingId }: { product: an
       setSellingPrice(initialPricing.sellingPrice)
     } else if (initialPricing?.pricingType === 'profit_margin' && initialPricing?.profitMarginPercent) {
       // Fallback for legacy records: calculate dynamically for display
-      const cost = parseFloat(product.costPrice) || 0;
+      const baseCost = parseFloat(product.costPrice) || 0;
+      // Effective Cost includes freight
+      const effectiveCost = !!freightRate ? baseCost * (1 + freightRate / 100) : baseCost;
+
       const margin = parseFloat(initialPricing.profitMarginPercent);
-      if (!isNaN(cost) && !isNaN(margin)) {
-        setSellingPrice((cost * (1 + margin / 100)).toFixed(2))
+      if (!isNaN(effectiveCost) && !isNaN(margin)) {
+        // Calculate Price from Effective Cost and Margin
+        const price = effectiveCost * (1 + margin / 100);
+        setSellingPrice(price.toFixed(2))
       } else {
         setSellingPrice('')
       }
     } else {
       setSellingPrice('')
     }
-  }, [initialPricing, product.costPrice])
+  }, [initialPricing, product.costPrice, freightRate])
 
   const handleSaveAttempt = () => {
     if (initialPricing?.effectiveTo) {
@@ -296,18 +305,17 @@ function PricingRow({ product, initialPricing, onSave, savingId }: { product: an
     setProfitMarginPercent(value);
     setIsDirty(true);
     if (value === '' || isNaN(parseFloat(value))) {
-      // If clearing margin, keep price? Or clear? 
-      // Let's keep price or maybe revert to default? 
-      // Better to perhaps do nothing to price or clear it? 
-      // If logic is "Margin drives Price", then no margin = no calculated price.
-      // But we want to preserve "Stored Price". 
-      // Let's leaves sellingPrice as is if invalid, OR recalculate if valid.
       return;
     }
     const margin = parseFloat(value);
-    const cost = parseFloat(product.costPrice) || 0;
-    const newPrice = (cost * (1 + margin / 100)).toFixed(2);
-    setSellingPrice(newPrice);
+    const baseCost = parseFloat(product.costPrice) || 0;
+    // Effective Cost includes freight
+    const effectiveCost = !!freightRate ? baseCost * (1 + freightRate / 100) : baseCost;
+
+    // Base Calculation: Effective Cost + Margin
+    const newPrice = effectiveCost * (1 + margin / 100);
+
+    setSellingPrice(newPrice.toFixed(2));
   }
 
   const isSaving = savingId === product.id
@@ -319,7 +327,14 @@ function PricingRow({ product, initialPricing, onSave, savingId }: { product: an
         <div className="text-xs text-gray-500">{product.sku}</div>
       </td>
       <td className="px-6 py-4 text-sm text-gray-600">
-        ₹ {product.costPrice || 0}
+        <div className="flex flex-col">
+          <span>₹ {(!!freightRate ? (parseFloat(product.costPrice || 0) * (1 + freightRate / 100)).toFixed(2) : (product.costPrice || 0))}</span>
+          {!!freightRate && (
+            <span className="text-[10px] text-emerald-600 font-medium">
+              (incl. {freightRate}% freight)
+            </span>
+          )}
+        </div>
       </td>
       <td className="px-6 py-4 text-sm">
         <select
@@ -337,16 +352,19 @@ function PricingRow({ product, initialPricing, onSave, savingId }: { product: an
             <>
               <Input
                 type="number"
-                className="h-8 w-20 text-xs"
+                className="h-8 w-16 text-xs text-right"
                 placeholder="%"
                 value={profitMarginPercent}
                 onChange={(e) => handleMarginChange(e.target.value)}
               />
               <span className="text-xs text-gray-500">%</span>
-              <span className="text-gray-400 text-xs ml-2">→</span>
-              <span className="text-sm font-medium text-gray-900 ml-1">
-                ₹ {sellingPrice}
-              </span>
+              <span className="text-gray-400 text-xs mx-1">→</span>
+              <div className="flex flex-col items-end leading-none">
+                <span className="text-sm font-medium text-gray-900">
+                  ₹ {sellingPrice}
+                </span>
+
+              </div>
             </>
           ) : (
             <>

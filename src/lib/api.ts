@@ -102,12 +102,28 @@ export async function createCustomer(data: any) {
     });
 }
 
+export async function updateCustomer(customerId: string, data: any) {
+    return fetchAPI(`/customers/${customerId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+        headers: getAuthHeaders()
+    });
+}
+
 export async function createUser(data: any) {
     return fetchAPI('/users', {
         method: 'POST',
         body: JSON.stringify(data),
         headers: getAuthHeaders()
     });
+}
+
+export async function fetchStoreUsers() {
+    return fetchAPI('/users', { headers: getAuthHeaders() });
+}
+
+export async function fetchUser(userId: string) {
+    return fetchAPI(`/users/${userId}`, { headers: getAuthHeaders() });
 }
 
 export async function updateUser(userId: string, data: any) {
