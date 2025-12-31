@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { History } from "lucide-react"
 import { fetchAllOrders, updateOrderStatus } from "@/lib/api"
-import { OrderInvoiceDialog } from "../order-invoice-dialog"
+import { PayOrderDialog } from "../order-invoice-dialog"
 import { toast } from "sonner"
 
 interface OrdersSectionProps {
@@ -14,7 +14,7 @@ interface OrdersSectionProps {
 export function OrdersSection({ activeStore }: OrdersSectionProps) {
     const [orders, setOrders] = useState<any[]>([])
     const [showCompletedOrders, setShowCompletedOrders] = useState(false)
-    const [viewingInvoice, setViewingInvoice] = useState<any>(null)
+    const [viewingPayOrder, setViewingPayOrder] = useState<any>(null)
 
     useEffect(() => {
         if (activeStore) {
@@ -40,7 +40,7 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                     onClick={() => setShowCompletedOrders(false)}
                     className="rounded-full"
                 >
-                    Active Orders
+                    Active Pay Orders
                 </Button>
                 <Button
                     variant={showCompletedOrders ? "default" : "ghost"}
@@ -57,7 +57,7 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                     <table className="w-full">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Order ID</th>
+                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">PO #</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Date</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Customer</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Placed By</th>
@@ -67,18 +67,18 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                         </thead>
                         <tbody>
                             {orders.filter(o => showCompletedOrders ? (o.status === 'completed' || o.status === 'cancelled') : (o.status !== 'completed' && o.status !== 'cancelled')).length === 0 ? (
-                                <tr><td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">No orders found.</td></tr>
+                                <tr><td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">No pay orders found.</td></tr>
                             ) : orders.filter(o => showCompletedOrders ? (o.status === 'completed' || o.status === 'cancelled') : (o.status !== 'completed' && o.status !== 'cancelled')).map((order) => (
                                 <tr
                                     key={order.id}
                                     className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50 transition-colors cursor-pointer"
-                                    onClick={() => setViewingInvoice(order)}
+                                    onClick={() => setViewingPayOrder(order)}
                                 >
                                     <td className="px-6 py-4 text-sm font-mono text-gray-900 font-semibold">#{order.orderNumber}</td>
                                     <td className="px-6 py-4 text-sm text-gray-600">{new Date(order.createdAt).toLocaleDateString()}</td>
                                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{order.customer?.name}</td>
                                     <td className="px-6 py-4 text-sm text-gray-600">{order.placedByUser?.name || order.placedByCustomerUser?.name}</td>
-                                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{order.currency} {order.totalAmount}</td>
+                                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{order.currency} {order.finalAmount || order.totalAmount}</td>
                                     <td className="px-6 py-4 text-sm" onClick={(e) => e.stopPropagation()}>
                                         <select
                                             className={`text-xs font-medium rounded-full px-2 py-1 border-0 ring-1 ring-inset focus:ring-2 
@@ -111,10 +111,10 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                 </div>
             </Card>
 
-            <OrderInvoiceDialog
-                order={viewingInvoice}
-                open={!!viewingInvoice}
-                onOpenChange={(open) => !open && setViewingInvoice(null)}
+            <PayOrderDialog
+                order={viewingPayOrder}
+                open={!!viewingPayOrder}
+                onOpenChange={(open: boolean) => !open && setViewingPayOrder(null)}
             />
         </div>
     )

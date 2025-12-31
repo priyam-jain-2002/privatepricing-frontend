@@ -74,6 +74,10 @@ export async function fetchCustomers() {
     return fetchAPI(`/customers`, { headers: getAuthHeaders() });
 }
 
+export async function fetchCustomer(customerId: string) {
+    return fetchAPI(`/customers/${customerId}`, { headers: getAuthHeaders() });
+}
+
 export async function fetchProducts() {
     return fetchAPI(`/products`, { headers: getAuthHeaders() });
 }

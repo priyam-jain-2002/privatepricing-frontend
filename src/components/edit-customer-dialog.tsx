@@ -7,19 +7,52 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useState, useEffect } from "react"
-import { updateCustomer } from "@/lib/api"
+import { AlertCircle, MapPin, Plus, Trash2 } from "lucide-react"
+import { updateCustomer, fetchBranches, createBranch } from "@/lib/api"
 import { toast } from "sonner"
-import { AlertCircle } from "lucide-react"
 
 export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: { customer: any, open: boolean, onOpenChange: (open: boolean) => void, onUpdate: () => void }) {
     const [loading, setLoading] = useState(false)
     const [freightType, setFreightType] = useState<'exclusive' | 'inclusive'>('exclusive')
 
+    // Branch State
+    const [branches, setBranches] = useState<any[]>([])
+    const [newBranchName, setNewBranchName] = useState('')
+    const [newBranchAddress, setNewBranchAddress] = useState('')
+    const [isAddingBranch, setIsAddingBranch] = useState(false)
+
     useEffect(() => {
         if (customer) {
             setFreightType(customer.inclusiveFreightRate !== null ? 'inclusive' : 'exclusive')
+            loadBranches();
         }
     }, [customer])
+
+    const loadBranches = async () => {
+        try {
+            const data = await fetchBranches(customer.id);
+            setBranches(data);
+        } catch (err) {
+            console.error("Failed to load branches", err);
+        }
+    }
+
+    const handleAddBranch = async () => {
+        if (!newBranchName || !newBranchAddress) {
+            toast.error("Please provide both name and address");
+            return;
+        }
+        try {
+            await createBranch(customer.id, { customerId: customer.id, name: newBranchName, address: newBranchAddress });
+            toast.success("Branch added successfully");
+            setNewBranchName('');
+            setNewBranchAddress('');
+            setIsAddingBranch(false);
+            loadBranches();
+        } catch (err: any) {
+            toast.error("Failed to add branch: " + err.message);
+        }
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -99,7 +132,6 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: {
                     </div>
 
                     {/* Terms and Conditions */}
-                    {/* Terms and Conditions */}
                     <div className="rounded-lg border p-4 space-y-4">
                         <h4 className="text-sm font-medium text-gray-900">Terms & Conditions</h4>
                         {(!customer.deliveryTime || !customer.paymentTerms) && (
@@ -137,7 +169,6 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: {
                         </div>
                     </div>
 
-                    {/* Freight Settings */}
                     {/* Freight Settings */}
                     <div className="rounded-lg border p-4 space-y-4 bg-gray-50/50">
                         <div className="flex items-center justify-between">
@@ -182,6 +213,57 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: {
                         {freightType === 'inclusive' && (
                             <p className="text-xs text-muted-foreground">Product prices will be treated as including this freight percentage.</p>
                         )}
+                    </div>
+
+                    {/* Branch Management */}
+                    <div className="rounded-lg border p-4 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-medium text-gray-900">Branches</h4>
+                            <Button type="button" size="sm" variant="outline" onClick={() => setIsAddingBranch(!isAddingBranch)}>
+                                <Plus className="h-3.5 w-3.5 mr-1" /> Add Branch
+                            </Button>
+                        </div>
+
+                        {isAddingBranch && (
+                            <div className="p-3 bg-gray-50 border border-gray-100 rounded-md space-y-3 animate-in slide-in-from-top-2">
+                                <div className="space-y-1">
+                                    <Label className="text-xs">Branch Name</Label>
+                                    <Input
+                                        placeholder="e.g. Main HQ"
+                                        value={newBranchName}
+                                        onChange={e => setNewBranchName(e.target.value)}
+                                        className="h-8 bg-white"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs">Address</Label>
+                                    <Textarea
+                                        placeholder="Full address..."
+                                        value={newBranchAddress}
+                                        onChange={e => setNewBranchAddress(e.target.value)}
+                                        className="min-h-[60px] text-xs bg-white"
+                                    />
+                                </div>
+                                <div className="flex justify-end gap-2">
+                                    <Button type="button" variant="ghost" size="sm" onClick={() => setIsAddingBranch(false)} className="h-7 text-xs">Cancel</Button>
+                                    <Button type="button" size="sm" onClick={handleAddBranch} className="h-7 text-xs">Save Branch</Button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                            {branches.length === 0 ? (
+                                <p className="text-xs text-gray-500 italic text-center py-2">No branches configured.</p>
+                            ) : branches.map(branch => (
+                                <div key={branch.id} className="flex items-start gap-3 p-3 rounded-md border border-gray-100 bg-white group hover:border-blue-100 transition-colors">
+                                    <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-900">{branch.name}</p>
+                                        <p className="text-xs text-gray-500 whitespace-pre-wrap">{branch.address}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
                     <div className="flex justify-end gap-2 pt-4">

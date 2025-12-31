@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { useState, useEffect } from "react"
-import { fetchProducts, getCustomerPricings, createCustomerPricing, updateCustomerPricing } from "@/lib/api"
+import { fetchProducts, getCustomerPricings, createCustomerPricing, updateCustomerPricing, fetchCustomer } from "@/lib/api"
 import { Loader2, Save, Check, Plus, Search, Calendar as CalendarIcon } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -16,12 +16,13 @@ import { cn } from "@/lib/utils"
 interface CustomerPricingManagementProps {
   storeId: string;
   customerId: string;
-  customer: any;
+  customer?: any;
 }
 
 export function CustomerPricingManagement({ storeId, customerId, customer }: CustomerPricingManagementProps) {
   // Main List State
   const [customerPricings, setCustomerPricings] = useState<any[]>([])
+  const [currentCustomer, setCurrentCustomer] = useState<any>(customer || null)
   const [loading, setLoading] = useState(true)
   const [savingId, setSavingId] = useState<string | null>(null)
 
@@ -39,7 +40,15 @@ export function CustomerPricingManagement({ storeId, customerId, customer }: Cus
   async function loadCustomerData() {
     setLoading(true)
     try {
-      const pricingData = await getCustomerPricings(storeId, customerId)
+      const [pricingData, fetchedCustomer] = await Promise.all([
+        getCustomerPricings(storeId, customerId),
+        !currentCustomer ? fetchCustomer(customerId) : Promise.resolve(null)
+      ]);
+
+      if (fetchedCustomer) {
+        setCurrentCustomer(fetchedCustomer);
+      }
+
       // Sort: Most recently added first
       pricingData.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       setCustomerPricings(pricingData)
@@ -154,7 +163,7 @@ export function CustomerPricingManagement({ storeId, customerId, customer }: Cus
                   initialPricing={pricing}
                   onSave={(updates) => handleUpdate(pricing.id, pricing.productId, updates)}
                   savingId={savingId}
-                  freightRate={customer.inclusiveFreightRate ? parseFloat(customer.inclusiveFreightRate) : 0}
+                  freightRate={currentCustomer?.inclusiveFreightRate ? parseFloat(currentCustomer.inclusiveFreightRate) : 0}
                 />
               ))}
             </tbody>

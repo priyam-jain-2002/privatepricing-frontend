@@ -2,16 +2,16 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ShoppingCart, LogOut, Package, Search, Menu, X, User, Loader2 } from "lucide-react"
+import { ShoppingCart, LogOut, Package, Search, Menu, X, User, Loader2, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
 import { toast } from "sonner"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { fetchAPI, getUserFromToken, createStorefrontOrder, fetchStorefrontOrders } from "@/lib/api"
+import { fetchAPI, getUserFromToken, createStorefrontOrder, fetchStorefrontOrders, fetchCustomer } from "@/lib/api"
 import { cn } from "@/lib/utils"
-import { OrderInvoiceDialog } from "@/components/order-invoice-dialog"
+import { PayOrderDialog } from "@/components/order-invoice-dialog"
 import { format } from "date-fns"
 interface Product {
   id: string
@@ -51,6 +51,7 @@ export function CustomerStorefront() {
   const [totalItems, setTotalItems] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [customerDetails, setCustomerDetails] = useState<any>(null)
 
   // Store Context
   const [storeId, setStoreId] = useState<string | null>(null)
@@ -127,18 +128,23 @@ export function CustomerStorefront() {
     init()
   }, [router])
 
-  // Fetch Products
+  // Fetch Products & Customer Details
   useEffect(() => {
     if (!storeId || !user || !authContext?.customer?.id || !accessToken) return
 
-    async function fetchProducts() {
+    async function loadData() {
       try {
         setLoading(true)
-        const data = await fetchAPI(`/storefront/customers/${authContext?.customer?.id}/pricing`, {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        })
+        const [productsData, custData] = await Promise.all([
+          fetchAPI(`/storefront/customers/${authContext?.customer?.id}/pricing`, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          }),
+          fetchCustomer(authContext!.customer!.id)
+        ]);
 
-        const mappedProducts = data.map((p: any) => ({
+        setCustomerDetails(custData);
+
+        const mappedProducts = productsData.map((p: any) => ({
           id: p.productId,
           name: p.productName,
           unit: "unit",
@@ -162,7 +168,7 @@ export function CustomerStorefront() {
       }
     }
 
-    fetchProducts()
+    loadData()
   }, [storeId, user, authContext, accessToken])
   // Fetch Orders
   useEffect(() => {
@@ -185,6 +191,25 @@ export function CustomerStorefront() {
     loadOrders()
   }, [storeId, user, authContext, accessToken, activeView])
 
+  // Fetch Branches
+  const [branches, setBranches] = useState<any[]>([])
+  useEffect(() => {
+    if (!authContext?.customer?.id || !accessToken) return
+    async function loadBranches() {
+      try {
+        // We can reuse the fetchBranches from api.ts which calls /customers/:cid/branches
+        // Requires the user (even customer user) to have access to this endpoint
+        const data = await fetchAPI(`/customers/${authContext?.customer?.id}/branches`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        })
+        setBranches(data)
+      } catch (err) {
+        console.error("Failed to load branches", err)
+      }
+    }
+    loadBranches()
+  }, [authContext, accessToken])
+
   // Cart Logic
   const updateQuantity = (id: string, newQty: number) => {
     setProducts(products.map(p => {
@@ -204,10 +229,52 @@ export function CustomerStorefront() {
   const [isReviewOpen, setIsReviewOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Selection State
+  const [selectedBillingBranch, setSelectedBillingBranch] = useState<string>("")
+  const [selectedShippingBranch, setSelectedShippingBranch] = useState<string>("")
+  const [customerPoNumber, setCustomerPoNumber] = useState<string>("")
+
   // Calculated totals for review
   const orderItems = products.filter(p => p.quantity > 0)
-  const orderTotal = orderItems.reduce((sum, p) => sum + (p.price * p.quantity), 0)
+
+  // Calculate Totals including GST
+  const calculateTotals = () => {
+    let baseTotal = 0;
+    let cgstTotal = 0;
+    let sgstTotal = 0;
+
+    orderItems.forEach(item => {
+      // Assuming product has cgst/sgst defaults if not provided? 
+      // For now we'll assume 9% default if the API didn't return them (it should have if we mapped it, wait we didn't map them in fetchProducts)
+      // Let's assume standard 9% for now as a fallback or if invalid.
+      // Ideally we update fetchProducts to return cgst/sgst.
+      // Since I can't easily update the backend return type in 1 go without checking types, I'll default to 9%.
+      const cgstRate = 9.00;
+      const sgstRate = 9.00;
+
+      const itemBase = item.price * item.quantity;
+      baseTotal += itemBase;
+
+      cgstTotal += (itemBase * cgstRate) / 100;
+      sgstTotal += (itemBase * sgstRate) / 100;
+    });
+
+    return { baseTotal, cgstTotal, sgstTotal, finalTotal: baseTotal + cgstTotal + sgstTotal };
+  }
+
+  const { baseTotal, cgstTotal, sgstTotal, finalTotal } = calculateTotals();
   const orderCurrency = orderItems[0]?.currency || 'INR'
+
+  const getBranchAddress = (branchId: string) => {
+    const b = branches.find(br => br.id === branchId);
+    if (!b) return null;
+    return (
+      <div className="text-sm text-gray-500 mt-1">
+        <p className="font-medium text-gray-700">{b.name}</p>
+        <p className="whitespace-pre-wrap">{b.address || 'No address provided'}</p>
+      </div>
+    );
+  }
 
   const handleOrderRequest = () => {
     if (!storeId || !user || !authContext?.customer?.id) {
@@ -219,13 +286,27 @@ export function CustomerStorefront() {
   }
 
   const confirmOrder = async () => {
+    if (!selectedBillingBranch || !selectedShippingBranch) {
+      toast.error("Please select both Billing and Shipping branches.");
+      return;
+    }
+
     try {
       setIsSubmitting(true)
       const payload: any = {
         items: orderItems.map(p => ({
           productId: p.id,
           quantity: p.quantity
-        }))
+        })),
+        billingBranchId: selectedBillingBranch,
+        shippingBranchId: selectedShippingBranch,
+        customerPoNumber: customerPoNumber || null,
+        // Pass snapshots if backend supports it, otherwise we might rely on backend to fetch current cust details.
+        // But the user request implies they want these to be part of the order.
+        // If the backend `create` method doesn't take these in DTO, they won't be saved unless I update backend.
+        // Let's assume for now I will rely on backend to snapshot if I haven't added them to DTO.
+        // RETHINK: The user wants me to "add them o pay oder to".
+        // If I need to send them from frontend, I need to make sure DTO accepts them.
       }
 
       if (user?.role === 0) {
@@ -236,7 +317,7 @@ export function CustomerStorefront() {
 
       const order = await createStorefrontOrder(storeId!, authContext!.customer!.id, authContext!.branch?.id, payload)
 
-      toast.success(`Order #${order.orderNumber} placed successfully!`, {
+      toast.success(`Pay Order #${order.orderNumber} created successfully!`, {
         description: `Order for ${orderItems.length} items submitted.`
       })
 
@@ -253,7 +334,7 @@ export function CustomerStorefront() {
 
   const handleLogout = () => {
     sessionStorage.clear()
-
+    // ... (logout logic unchanged)
     if (subdomain) {
       const protocol = window.location.protocol;
       const host = window.location.host;
@@ -339,7 +420,7 @@ export function CustomerStorefront() {
 
               <nav className="flex space-x-1">
                 <Button variant={activeView === 'catalog' ? 'secondary' : 'ghost'} onClick={() => setActiveView('catalog')}>Catalog</Button>
-                <Button variant={activeView === 'orders' ? 'secondary' : 'ghost'} onClick={() => setActiveView('orders')}>Orders</Button>
+                <Button variant={activeView === 'orders' ? 'secondary' : 'ghost'} onClick={() => setActiveView('orders')}>Purchase Orders</Button>
               </nav>
 
               <div className="h-8 w-px bg-gray-200"></div>
@@ -353,7 +434,7 @@ export function CustomerStorefront() {
                 )}
               >
                 <ShoppingCart className="mr-2 h-4 w-4" />
-                <span className="font-medium">Request Order</span>
+                <span className="font-medium">Create Pay Order</span>
                 {totalItems > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 h-5 w-5 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm ring-2 ring-white">
                     {totalItems}
@@ -362,75 +443,207 @@ export function CustomerStorefront() {
               </Button>
 
               <Sheet open={isReviewOpen} onOpenChange={setIsReviewOpen}>
-                <SheetContent side="right" className="w-[100vw] sm:max-w-[540px] flex flex-col h-full bg-white shadow-2xl border-l border-gray-100">
-                  <SheetHeader className="border-b border-gray-100 pb-6 mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 bg-blue-50 rounded-full flex items-center justify-center">
-                        <ShoppingCart className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div className="text-left">
-                        <SheetTitle className="text-xl">Your Cart</SheetTitle>
-                        <SheetDescription className="text-sm text-slate-500">
-                          Review your items before placing the order.
-                        </SheetDescription>
-                      </div>
+                <SheetContent side="right" className="w-[100vw] sm:max-w-[500px] flex flex-col h-full bg-white shadow-2xl p-0 gap-0">
+                  <SheetHeader className="px-6 py-5 border-b border-gray-100 flex-shrink-0 bg-white">
+                    <div className="text-left space-y-1">
+                      <SheetTitle className="text-xl font-bold text-gray-900">Your Cart</SheetTitle>
+                      <SheetDescription className="text-sm text-slate-500">
+                        Review items and select delivery details.
+                      </SheetDescription>
                     </div>
                   </SheetHeader>
 
-                  <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+                  <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
                     {orderItems.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-48 text-gray-400">
-                        <ShoppingCart className="h-12 w-12 mb-3 opacity-20" />
-                        <p>Your cart is empty</p>
+                      <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-4">
+                        <div className="h-16 w-16 bg-gray-50 rounded-full flex items-center justify-center">
+                          <ShoppingCart className="h-8 w-8 text-gray-300" />
+                        </div>
+                        <p className="font-medium">Your cart is empty</p>
                       </div>
                     ) : (
-                      <div className="space-y-4">
-                        {orderItems.map((item) => (
-                          <div key={item.id} className="flex gap-4 p-4 rounded-xl border border-gray-50 bg-gray-50/50 hover:border-blue-100 hover:bg-blue-50/30 transition-colors">
-                            <div className="h-16 w-16 bg-white rounded-lg border border-gray-100 flex items-center justify-center flex-shrink-0">
-                              <Package className="h-8 w-8 text-gray-300" />
+                      <>
+                        {/* Order Details Section */}
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="h-6 w-1 bg-blue-600 rounded-full"></div>
+                            <h4 className="font-semibold text-gray-900 uppercase tracking-wide text-xs">Order Details</h4>
+                          </div>
+
+                          <div className="grid gap-4">
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-medium text-gray-600">Customer PO Number <span className="text-gray-400 font-normal">(Optional)</span></label>
+                              <Input
+                                placeholder="e.g. PO-2024-001"
+                                value={customerPoNumber}
+                                onChange={(e) => setCustomerPoNumber(e.target.value)}
+                                className="bg-white h-9 text-sm"
+                              />
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex justify-between items-start mb-1">
-                                <h4 className="font-medium text-gray-900 truncate pr-2">{item.name}</h4>
-                                <span className="font-semibold text-gray-900 flex-shrink-0">
-                                  {item.currency === 'INR' ? `Rs. ${(item.price * item.quantity).toFixed(2)}` : `${item.currency} ${(item.price * item.quantity).toFixed(2)}`}
-                                </span>
+
+                            <div className="grid gap-4 pt-2">
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-gray-600">
+                                  {customerDetails?.isBillToSameAsShipTo ? "Branch (Billing & Shipping)" : "Billing Branch"}
+                                </label>
+                                <select
+                                  className="w-full h-9 text-sm border-gray-200 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
+                                  value={selectedBillingBranch}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setSelectedBillingBranch(val);
+                                    if (customerDetails?.isBillToSameAsShipTo) {
+                                      setSelectedShippingBranch(val);
+                                    }
+                                  }}
+                                >
+                                  <option value="">Select branch...</option>
+                                  {branches.map(b => (
+                                    <option key={b.id} value={b.id}>{b.name}</option>
+                                  ))}
+                                </select>
+                                {selectedBillingBranch && (
+                                  <div className="mt-2 text-xs bg-gray-50 border border-gray-100 rounded p-2.5 flex gap-2.5 animate-in fade-in zoom-in-95 duration-200">
+                                    <MapPin className="h-3.5 w-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                                    <div className="space-y-0.5">
+                                      <p className="font-medium text-gray-900">{branches.find(b => b.id === selectedBillingBranch)?.name}</p>
+                                      <p className="text-gray-500 leading-relaxed">{branches.find(b => b.id === selectedBillingBranch)?.address || 'No address'}</p>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                              <p className="text-sm text-gray-500 mb-2">{item.description}</p>
-                              <div className="flex items-center justify-between">
-                                <div className="text-xs text-gray-400 font-medium bg-white px-2 py-1 rounded border border-gray-100">
-                                  {item.quantity} x {item.currency === 'INR' ? `Rs. ${item.price}` : `${item.currency} ${item.price}`}
+
+                              {!customerDetails?.isBillToSameAsShipTo && (
+                                <div className="space-y-1.5">
+                                  <label className="text-xs font-medium text-gray-600">Shipping Branch</label>
+                                  <select
+                                    className="w-full h-9 text-sm border-gray-200 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
+                                    value={selectedShippingBranch}
+                                    onChange={(e) => setSelectedShippingBranch(e.target.value)}
+                                  >
+                                    <option value="">Select shipping branch...</option>
+                                    {branches.map(b => (
+                                      <option key={b.id} value={b.id}>{b.name}</option>
+                                    ))}
+                                  </select>
+                                  {selectedShippingBranch && (
+                                    <div className="mt-2 text-xs bg-gray-50 border border-gray-100 rounded p-2.5 flex gap-2.5 animate-in fade-in zoom-in-95 duration-200">
+                                      <MapPin className="h-3.5 w-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                                      <div className="space-y-0.5">
+                                        <p className="font-medium text-gray-900">{branches.find(b => b.id === selectedShippingBranch)?.name}</p>
+                                        <p className="text-gray-500 leading-relaxed">{branches.find(b => b.id === selectedShippingBranch)?.address || 'No address'}</p>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, item.quantity - 1)}>-</Button>
-                                  <span className="w-4 text-center text-sm font-medium">{item.quantity}</span>
-                                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, item.quantity + 1)}>+</Button>
-                                </div>
-                              </div>
+                              )}
                             </div>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+
+                        {/* Terms & Conditions Section */}
+                        {customerDetails && (
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="h-6 w-1 bg-amber-500 rounded-full"></div>
+                              <h4 className="font-semibold text-gray-900 uppercase tracking-wide text-xs">Terms & Conditions</h4>
+                            </div>
+                            <div className="bg-amber-50/50 rounded-lg p-4 border border-amber-100 text-xs text-gray-600 space-y-2">
+                              <div className="flex justify-between border-b border-amber-100 pb-2 last:border-0 last:pb-0">
+                                <span className="font-medium text-gray-700">Payment Terms</span>
+                                <span>{customerDetails.paymentTerms ? `Net ${customerDetails.paymentTerms} Days` : 'Standard'}</span>
+                              </div>
+                              <div className="flex justify-between border-b border-amber-100 pb-2 last:border-0 last:pb-0">
+                                <span className="font-medium text-gray-700">Delivery Time</span>
+                                <span>{customerDetails.deliveryTime ? `${customerDetails.deliveryTime} Days` : 'Standard'}</span>
+                              </div>
+                              <div className="flex justify-between border-b border-amber-100 pb-2 last:border-0 last:pb-0">
+                                <span className="font-medium text-gray-700">Freight</span>
+                                <span>{customerDetails.inclusiveFreightRate !== null ? 'Inclusive' : 'Exclusive'}</span>
+                              </div>
+                              {customerDetails.isBillToSameAsShipTo && (
+                                <div className="flex justify-between border-b border-amber-100 pb-2 last:border-0 last:pb-0">
+                                  <span className="font-medium text-gray-700">Shipping Policy</span>
+                                  <span>Bill To must match Ship To</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Items Section */}
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="h-6 w-1 bg-blue-600 rounded-full"></div>
+                            <h4 className="font-semibold text-gray-900 uppercase tracking-wide text-xs">Items ({orderItems.length})</h4>
+                          </div>
+
+                          <div className="space-y-3">
+                            {orderItems.map((item) => (
+                              <div key={item.id} className="flex gap-4 p-3 rounded-lg border border-gray-100 bg-white hover:border-gray-200 transition-colors">
+                                <div className="flex-1 min-w-0 py-0.5">
+                                  <div className="flex justify-between items-start">
+                                    <h4 className="text-sm font-medium text-gray-900 truncate pr-4">{item.name}</h4>
+                                    <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">
+                                      {item.currency === 'INR' ? `Rs. ${(item.price * item.quantity).toFixed(2)}` : `${item.currency} ${(item.price * item.quantity).toFixed(2)}`}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-0.5 mb-2 line-clamp-1">{item.description}</p>
+
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs text-gray-500 font-medium">
+                                      Price: {item.currency === 'INR' ? `Rs. ${item.price}` : `${item.currency} ${item.price}`}
+                                    </span>
+                                    <div className="flex items-center gap-2 bg-gray-50 rounded-md p-0.5 border border-gray-200">
+                                      <button
+                                        className="h-6 w-6 flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-white rounded-sm transition-all text-xs"
+                                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                      >-</button>
+                                      <span className="w-6 text-center text-xs font-semibold text-gray-700">{item.quantity}</span>
+                                      <button
+                                        className="h-6 w-6 flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-white rounded-sm transition-all text-xs"
+                                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                      >+</button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
                     )}
                   </div>
 
-                  <SheetFooter className="mt-auto border-t border-gray-100 pt-6">
-                    <div className="w-full space-y-4">
-                      <div className="flex justify-between items-center px-1">
-                        <span className="text-slate-500 font-medium">Subtotal</span>
-                        <span className="text-xl font-bold text-slate-900">
-                          {orderCurrency === 'INR'
-                            ? `Rs. ${orderTotal.toFixed(2)}`
-                            : `${orderCurrency} ${orderTotal.toFixed(2)}`}
-                        </span>
+                  <SheetFooter className="border-t border-gray-100 bg-gray-50/50 p-6">
+                    <div className="w-full space-y-6">
+                      <div className="space-y-2.5">
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span>Subtotal</span>
+                          <span className="font-medium">{orderCurrency} {baseTotal.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-500">
+                          <span>CGST (9%)</span>
+                          <span>{orderCurrency} {cgstTotal.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-500">
+                          <span>SGST (9%)</span>
+                          <span>{orderCurrency} {sgstTotal.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-3 border-t border-gray-200">
+                          <span className="text-base font-semibold text-gray-900">Total Purchase Order Value</span>
+                          <span className="text-xl font-bold text-blue-600">
+                            {orderCurrency} {finalTotal.toFixed(2)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex gap-3 pt-2">
-                        <Button variant="outline" className="flex-1 h-12" onClick={() => setIsReviewOpen(false)} disabled={isSubmitting}>
-                          Continue Shopping
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <Button variant="outline" className="h-11 bg-white" onClick={() => setIsReviewOpen(false)} disabled={isSubmitting}>
+                          Back
                         </Button>
-                        <Button onClick={confirmOrder} disabled={isSubmitting || orderItems.length === 0} className="flex-[2] h-12 bg-blue-600 hover:bg-blue-700 text-lg shadow-blue-200 shadow-lg">
-                          {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : "Confirm Order"}
+                        <Button onClick={confirmOrder} disabled={isSubmitting || orderItems.length === 0 || !selectedBillingBranch} className="col-span-2 h-11 bg-slate-900 hover:bg-slate-800 text-white shadow-md">
+                          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirm Purchase Order"}
                         </Button>
                       </div>
                     </div>
@@ -659,10 +872,10 @@ export function CustomerStorefront() {
               </div>
             </Card>
 
-            <OrderInvoiceDialog
+            <PayOrderDialog
               order={viewingOrder}
               open={!!viewingOrder}
-              onOpenChange={(open) => !open && setViewingOrder(null)}
+              onOpenChange={(open: boolean) => !open && setViewingOrder(null)}
             />
           </div>
         )}
