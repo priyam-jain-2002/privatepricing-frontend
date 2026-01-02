@@ -351,8 +351,8 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                                                 <td className="px-6 py-4 text-sm text-gray-900">{user.name}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-600">
-                                                    <span className={`inline - flex items - center px - 2.5 py - 0.5 rounded - full text - xs font - medium capitalize 
-                                  ${user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} `}>
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize 
+                                  ${user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                                                         {user.status}
                                                     </span>
                                                 </td>

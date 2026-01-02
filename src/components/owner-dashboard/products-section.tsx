@@ -44,12 +44,19 @@ export function ProductsSection({ activeStore, setStores, stores, setActiveStore
         const formData = new FormData(form);
 
         try {
+            const basePriceNum = parseFloat(formData.get('basePrice') as string || '0');
+            const baseFreightNum = parseFloat(formData.get('baseFreight') as string || '0');
+            const totalPercentage = baseFreightNum + (activeStore?.operationCostPercentage || 0);
+            const calculatedCostPrice = basePriceNum * (1 + totalPercentage / 100);
+
             await createProduct({
                 storeId: activeStore.id,
                 name: formData.get('name'),
                 sku: formData.get('sku'),
-                basePrice: parseFloat(formData.get('basePrice') as string || '0'),
-                baseFreight: parseFloat(formData.get('baseFreight') as string || '0'),
+                hsnCode: formData.get('hsnCode'),
+                basePrice: basePriceNum,
+                baseFreight: baseFreightNum,
+                costPrice: parseFloat(calculatedCostPrice.toFixed(2)),
                 cgst: parseFloat(formData.get('cgst') as string || '0'),
                 sgst: parseFloat(formData.get('sgst') as string || '0'),
                 currency: 'INR'
@@ -122,13 +129,19 @@ export function ProductsSection({ activeStore, setStores, stores, setActiveStore
                                 <Input name="sku" required />
                             </div>
                             <div className="space-y-2">
+                                <label className="text-sm font-medium">HSN Code</label>
+                                <Input name="hsnCode" placeholder="Optional" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
                                 <label className="text-sm font-medium">Base Price</label>
                                 <Input name="basePrice" type="number" step="0.01" min="0" required />
                             </div>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Incoming Freight</label>
-                            <Input name="baseFreight" type="number" step="0.01" min="0" />
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Incoming Freight (%)</label>
+                                <Input name="baseFreight" type="number" step="0.01" min="0" placeholder="%" />
+                            </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -176,9 +189,9 @@ export function ProductsSection({ activeStore, setStores, stores, setActiveStore
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Product Name</th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">SKU</th>
+                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">SKU / HSN</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Base Price (Global)</th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Incoming Freight</th>
+                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Incoming Freight (%)</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">CGST %</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">SGST %</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">

@@ -145,7 +145,7 @@ export function CustomerPricingManagement({ storeId, customerId, customer }: Cus
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Product</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Cost Price</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Cost Price (incl. Freight %)</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Strategy</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Selling Price</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Valid Until</th>
@@ -340,7 +340,7 @@ function PricingRow({ product, initialPricing, onSave, savingId, freightRate }: 
           <span>₹ {(!!freightRate ? (parseFloat(product.costPrice || 0) * (1 + freightRate / 100)).toFixed(2) : (product.costPrice || 0))}</span>
           {!!freightRate && (
             <span className="text-[10px] text-emerald-600 font-medium">
-              (incl. {freightRate}% freight)
+              (incl. {freightRate}% Delivery)
             </span>
           )}
         </div>
