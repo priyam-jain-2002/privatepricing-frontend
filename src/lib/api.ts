@@ -17,7 +17,8 @@ export async function fetchAPI(path: string, options: RequestInit = {}) {
         throw new Error(errorData?.message || errorData?.error || `Request failed with status ${res.status}`);
     }
 
-    return res.json();
+    const text = await res.text();
+    return text ? JSON.parse(text) : {};
 }
 // ... keep existing fetchAPI ...
 
@@ -239,4 +240,18 @@ export async function createStorefrontOrder(storeId: string, customerId: string,
 
 export async function fetchStorefrontOrders(customerId: string) {
     return fetchAPI(`/storefront/customers/${customerId}/orders`, { headers: getAuthHeaders() });
+}
+
+export async function deleteUser(userId: string) {
+    return fetchAPI(`/users/${userId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+    });
+}
+
+export async function deleteCustomerUser(customerId: string, userId: string) {
+    return fetchAPI(`/customers/${customerId}/users/${userId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+    });
 }

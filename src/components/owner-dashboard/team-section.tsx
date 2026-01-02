@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { fetchStoreUsers, createUser, updateUser } from "@/lib/api"
+import { fetchStoreUsers, createUser, updateUser, deleteUser } from "@/lib/api"
 import { toast } from "sonner"
+import { Trash2 } from "lucide-react"
+import { DeleteConfirmationDialog } from "../delete-confirmation-dialog"
 
 interface TeamSectionProps {
     activeStore: any
@@ -14,6 +16,7 @@ interface TeamSectionProps {
 export function TeamSection({ activeStore }: TeamSectionProps) {
     const [storeUsers, setStoreUsers] = useState<any[]>([])
     const [editingStoreUser, setEditingStoreUser] = useState<any>(null)
+    const [deletingUserId, setDeletingUserId] = useState<string | null>(null)
 
     useEffect(() => {
         loadStoreUsers()
@@ -78,6 +81,20 @@ export function TeamSection({ activeStore }: TeamSectionProps) {
         }
     }
 
+    const handleDeleteStoreUser = async () => {
+        if (!deletingUserId) return;
+
+        try {
+            await deleteUser(deletingUserId);
+            await loadStoreUsers();
+            toast.success("Team member deleted successfully!");
+        } catch (err: any) {
+            toast.error("Failed to delete user: " + err.message);
+        } finally {
+            setDeletingUserId(null);
+        }
+    }
+
     return (
         <div className="space-y-6">
             <div className="bg-white p-6 rounded-lg border border-gray-200">
@@ -104,6 +121,7 @@ export function TeamSection({ activeStore }: TeamSectionProps) {
                             defaultValue="4"
                         >
                             <option value="4">Store Manager</option>
+                            <option value="5">Order Manager</option>
                         </select>
                     </div>
                     <Button type="submit">Add Member</Button>
@@ -126,22 +144,33 @@ export function TeamSection({ activeStore }: TeamSectionProps) {
                             </tr>
                         </thead>
                         <tbody>
-                            {storeUsers.filter(u => u.role === 0 || u.role === 4).length === 0 ? (
+                            {storeUsers.filter(u => u.role === 0 || u.role === 4 || u.role === 5).length === 0 ? (
                                 <tr><td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">No team members found.</td></tr>
-                            ) : storeUsers.filter(u => u.role === 0 || u.role === 4).map((user) => (
+                            ) : storeUsers.filter(u => u.role === 0 || u.role === 4 || u.role === 5).map((user) => (
                                 <tr key={user.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50">
                                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{user.name}</td>
                                     <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
                                     <td className="px-6 py-4 text-sm text-gray-600">
                                         {user.role === 0 ? 'Store Owner' :
                                             user.role === 4 ? 'Store Manager' :
-                                                user.role === 3 ? 'Branch User' :
-                                                    user.role === 1 ? 'Customer Admin' : 'Unknown'}
+                                                user.role === 5 ? 'Order Manager' :
+                                                    user.role === 3 ? 'Branch User' :
+                                                        user.role === 1 ? 'Customer Admin' : 'Unknown'}
                                     </td>
 
-                                    <td className="px-6 py-4 text-sm text-right">
+                                    <td className="px-6 py-4 text-sm text-right space-x-2">
                                         {user.role !== 0 && (
-                                            <Button variant="outline" size="sm" onClick={() => setEditingStoreUser(user)}>Edit</Button>
+                                            <>
+                                                <Button variant="outline" size="sm" onClick={() => setEditingStoreUser(user)}>Edit</Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                    onClick={() => setDeletingUserId(user.id)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </>
                                         )}
                                     </td>
                                 </tr>
@@ -172,6 +201,14 @@ export function TeamSection({ activeStore }: TeamSectionProps) {
                     </form>
                 </DialogContent>
             </Dialog>
+
+            <DeleteConfirmationDialog
+                open={!!deletingUserId}
+                onOpenChange={(open) => !open && setDeletingUserId(null)}
+                onConfirm={handleDeleteStoreUser}
+                title="Delete Team Member"
+                description="Are you sure you want to delete this team member? They will lose access to the dashboard immediately."
+            />
         </div>
     )
 }

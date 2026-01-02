@@ -7,8 +7,25 @@ import { fetchAllOrders, updateOrderStatus } from "@/lib/api"
 import { PayOrderDialog } from "../order-invoice-dialog"
 import { toast } from "sonner"
 
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+
 interface OrdersSectionProps {
     activeStore: any
+}
+
+const statusConfig: Record<string, { label: string, variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" }> = {
+    requested: { label: "Requested", variant: "warning" },
+    pending: { label: "Pending", variant: "secondary" },
+    processing: { label: "Processing", variant: "default" },
+    completed: { label: "Completed", variant: "success" },
+    cancelled: { label: "Cancelled", variant: "destructive" },
 }
 
 export function OrdersSection({ activeStore }: OrdersSectionProps) {
@@ -80,16 +97,11 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                                     <td className="px-6 py-4 text-sm text-gray-600">{order.placedByUser?.name || order.placedByCustomerUser?.name}</td>
                                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{order.currency} {order.finalAmount || order.totalAmount}</td>
                                     <td className="px-6 py-4 text-sm" onClick={(e) => e.stopPropagation()}>
-                                        <select
-                                            className={`text-xs font-medium rounded-full px-2 py-1 border-0 ring-1 ring-inset focus:ring-2 
-                              ${order.status === 'completed' ? 'bg-green-50 text-green-700 ring-green-600/20' :
-                                                    order.status === 'cancelled' ? 'bg-red-50 text-red-700 ring-red-600/20' :
-                                                        'bg-yellow-50 text-yellow-800 ring-yellow-600/20'
-                                                }`}
+                                        <Select
                                             value={order.status}
-                                            onChange={async (e) => {
+                                            onValueChange={async (value) => {
                                                 try {
-                                                    await updateOrderStatus(activeStore.id, order.id, e.target.value);
+                                                    await updateOrderStatus(activeStore.id, order.id, value);
                                                     await loadOrders();
                                                     toast.success("Order status updated");
                                                 } catch (err: any) {
@@ -97,12 +109,21 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                                                 }
                                             }}
                                         >
-                                            <option value="requested">Requested</option>
-                                            <option value="pending">Pending</option>
-                                            <option value="processing">Processing</option>
-                                            <option value="completed">Completed</option>
-                                            <option value="cancelled">Cancelled</option>
-                                        </select>
+                                            <SelectTrigger className="w-[130px] h-8 text-xs font-medium rounded-full border-gray-200">
+                                                <SelectValue>
+                                                    <Badge variant={statusConfig[order.status]?.variant || "secondary"} className="h-5">
+                                                        {statusConfig[order.status]?.label || order.status}
+                                                    </Badge>
+                                                </SelectValue>
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {Object.entries(statusConfig).map(([value, { label }]) => (
+                                                    <SelectItem key={value} value={value} className="text-xs">
+                                                        {label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </td>
                                 </tr>
                             ))}

@@ -64,7 +64,7 @@ export function CustomerStorefront() {
   const [accessToken, setAccessToken] = useState<string | null>(null)
 
   // View State
-  const [activeView, setActiveView] = useState<'catalog' | 'orders'>('catalog')
+  const [activeView, setActiveView] = useState<'catalog' | 'orders' | 'checkout'>('catalog')
   const [orders, setOrders] = useState<any[]>([])
   const [showHistory, setShowHistory] = useState(false)
   const [viewingOrder, setViewingOrder] = useState<any>(null)
@@ -282,7 +282,7 @@ export function CustomerStorefront() {
       return
     }
     if (orderItems.length === 0) return
-    setIsReviewOpen(true)
+    setActiveView('checkout')
   }
 
   const confirmOrder = async () => {
@@ -442,213 +442,8 @@ export function CustomerStorefront() {
                 )}
               </Button>
 
-              <Sheet open={isReviewOpen} onOpenChange={setIsReviewOpen}>
-                <SheetContent side="right" className="w-[100vw] sm:max-w-[500px] flex flex-col h-full bg-white shadow-2xl p-0 gap-0">
-                  <SheetHeader className="px-6 py-5 border-b border-gray-100 flex-shrink-0 bg-white">
-                    <div className="text-left space-y-1">
-                      <SheetTitle className="text-xl font-bold text-gray-900">Your Cart</SheetTitle>
-                      <SheetDescription className="text-sm text-slate-500">
-                        Review items and select delivery details.
-                      </SheetDescription>
-                    </div>
-                  </SheetHeader>
-
-                  <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
-                    {orderItems.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-4">
-                        <div className="h-16 w-16 bg-gray-50 rounded-full flex items-center justify-center">
-                          <ShoppingCart className="h-8 w-8 text-gray-300" />
-                        </div>
-                        <p className="font-medium">Your cart is empty</p>
-                      </div>
-                    ) : (
-                      <>
-                        {/* Order Details Section */}
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="h-6 w-1 bg-blue-600 rounded-full"></div>
-                            <h4 className="font-semibold text-gray-900 uppercase tracking-wide text-xs">Order Details</h4>
-                          </div>
-
-                          <div className="grid gap-4">
-                            <div className="space-y-1.5">
-                              <label className="text-xs font-medium text-gray-600">Customer PO Number <span className="text-gray-400 font-normal">(Optional)</span></label>
-                              <Input
-                                placeholder="e.g. PO-2024-001"
-                                value={customerPoNumber}
-                                onChange={(e) => setCustomerPoNumber(e.target.value)}
-                                className="bg-white h-9 text-sm"
-                              />
-                            </div>
-
-                            <div className="grid gap-4 pt-2">
-                              <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-gray-600">
-                                  {customerDetails?.isBillToSameAsShipTo ? "Branch (Billing & Shipping)" : "Billing Branch"}
-                                </label>
-                                <select
-                                  className="w-full h-9 text-sm border-gray-200 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
-                                  value={selectedBillingBranch}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setSelectedBillingBranch(val);
-                                    if (customerDetails?.isBillToSameAsShipTo) {
-                                      setSelectedShippingBranch(val);
-                                    }
-                                  }}
-                                >
-                                  <option value="">Select branch...</option>
-                                  {branches.map(b => (
-                                    <option key={b.id} value={b.id}>{b.name}</option>
-                                  ))}
-                                </select>
-                                {selectedBillingBranch && (
-                                  <div className="mt-2 text-xs bg-gray-50 border border-gray-100 rounded p-2.5 flex gap-2.5 animate-in fade-in zoom-in-95 duration-200">
-                                    <MapPin className="h-3.5 w-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
-                                    <div className="space-y-0.5">
-                                      <p className="font-medium text-gray-900">{branches.find(b => b.id === selectedBillingBranch)?.name}</p>
-                                      <p className="text-gray-500 leading-relaxed">{branches.find(b => b.id === selectedBillingBranch)?.address || 'No address'}</p>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-
-                              {!customerDetails?.isBillToSameAsShipTo && (
-                                <div className="space-y-1.5">
-                                  <label className="text-xs font-medium text-gray-600">Shipping Branch</label>
-                                  <select
-                                    className="w-full h-9 text-sm border-gray-200 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
-                                    value={selectedShippingBranch}
-                                    onChange={(e) => setSelectedShippingBranch(e.target.value)}
-                                  >
-                                    <option value="">Select shipping branch...</option>
-                                    {branches.map(b => (
-                                      <option key={b.id} value={b.id}>{b.name}</option>
-                                    ))}
-                                  </select>
-                                  {selectedShippingBranch && (
-                                    <div className="mt-2 text-xs bg-gray-50 border border-gray-100 rounded p-2.5 flex gap-2.5 animate-in fade-in zoom-in-95 duration-200">
-                                      <MapPin className="h-3.5 w-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
-                                      <div className="space-y-0.5">
-                                        <p className="font-medium text-gray-900">{branches.find(b => b.id === selectedShippingBranch)?.name}</p>
-                                        <p className="text-gray-500 leading-relaxed">{branches.find(b => b.id === selectedShippingBranch)?.address || 'No address'}</p>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Terms & Conditions Section */}
-                        {customerDetails && (
-                          <div className="space-y-4">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="h-6 w-1 bg-amber-500 rounded-full"></div>
-                              <h4 className="font-semibold text-gray-900 uppercase tracking-wide text-xs">Terms & Conditions</h4>
-                            </div>
-                            <div className="bg-amber-50/50 rounded-lg p-4 border border-amber-100 text-xs text-gray-600 space-y-2">
-                              <div className="flex justify-between border-b border-amber-100 pb-2 last:border-0 last:pb-0">
-                                <span className="font-medium text-gray-700">Payment Terms</span>
-                                <span>{customerDetails.paymentTerms ? `Net ${customerDetails.paymentTerms} Days` : 'Standard'}</span>
-                              </div>
-                              <div className="flex justify-between border-b border-amber-100 pb-2 last:border-0 last:pb-0">
-                                <span className="font-medium text-gray-700">Delivery Time</span>
-                                <span>{customerDetails.deliveryTime ? `${customerDetails.deliveryTime} Days` : 'Standard'}</span>
-                              </div>
-                              <div className="flex justify-between border-b border-amber-100 pb-2 last:border-0 last:pb-0">
-                                <span className="font-medium text-gray-700">Freight</span>
-                                <span>{customerDetails.inclusiveFreightRate !== null ? 'Inclusive' : 'Exclusive'}</span>
-                              </div>
-                              {customerDetails.isBillToSameAsShipTo && (
-                                <div className="flex justify-between border-b border-amber-100 pb-2 last:border-0 last:pb-0">
-                                  <span className="font-medium text-gray-700">Shipping Policy</span>
-                                  <span>Bill To must match Ship To</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Items Section */}
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="h-6 w-1 bg-blue-600 rounded-full"></div>
-                            <h4 className="font-semibold text-gray-900 uppercase tracking-wide text-xs">Items ({orderItems.length})</h4>
-                          </div>
-
-                          <div className="space-y-3">
-                            {orderItems.map((item) => (
-                              <div key={item.id} className="flex gap-4 p-3 rounded-lg border border-gray-100 bg-white hover:border-gray-200 transition-colors">
-                                <div className="flex-1 min-w-0 py-0.5">
-                                  <div className="flex justify-between items-start">
-                                    <h4 className="text-sm font-medium text-gray-900 truncate pr-4">{item.name}</h4>
-                                    <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">
-                                      {item.currency === 'INR' ? `Rs. ${(item.price * item.quantity).toFixed(2)}` : `${item.currency} ${(item.price * item.quantity).toFixed(2)}`}
-                                    </span>
-                                  </div>
-                                  <p className="text-xs text-gray-500 mt-0.5 mb-2 line-clamp-1">{item.description}</p>
-
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xs text-gray-500 font-medium">
-                                      Price: {item.currency === 'INR' ? `Rs. ${item.price}` : `${item.currency} ${item.price}`}
-                                    </span>
-                                    <div className="flex items-center gap-2 bg-gray-50 rounded-md p-0.5 border border-gray-200">
-                                      <button
-                                        className="h-6 w-6 flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-white rounded-sm transition-all text-xs"
-                                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                      >-</button>
-                                      <span className="w-6 text-center text-xs font-semibold text-gray-700">{item.quantity}</span>
-                                      <button
-                                        className="h-6 w-6 flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-white rounded-sm transition-all text-xs"
-                                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                      >+</button>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  <SheetFooter className="border-t border-gray-100 bg-gray-50/50 p-6">
-                    <div className="w-full space-y-6">
-                      <div className="space-y-2.5">
-                        <div className="flex justify-between text-sm text-gray-600">
-                          <span>Subtotal</span>
-                          <span className="font-medium">{orderCurrency} {baseTotal.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>CGST (9%)</span>
-                          <span>{orderCurrency} {cgstTotal.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>SGST (9%)</span>
-                          <span>{orderCurrency} {sgstTotal.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                          <span className="text-base font-semibold text-gray-900">Total Purchase Order Value</span>
-                          <span className="text-xl font-bold text-blue-600">
-                            {orderCurrency} {finalTotal.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-3">
-                        <Button variant="outline" className="h-11 bg-white" onClick={() => setIsReviewOpen(false)} disabled={isSubmitting}>
-                          Back
-                        </Button>
-                        <Button onClick={confirmOrder} disabled={isSubmitting || orderItems.length === 0 || !selectedBillingBranch} className="col-span-2 h-11 bg-slate-900 hover:bg-slate-800 text-white shadow-md">
-                          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirm Purchase Order"}
-                        </Button>
-                      </div>
-                    </div>
-                  </SheetFooter>
-                </SheetContent>
+              <Sheet open={false} onOpenChange={() => { }}>
+                {/* Removed Sheet in favor of full page checkout */}
               </Sheet>
 
               <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-400 hover:text-slate-600">
@@ -673,12 +468,14 @@ export function CustomerStorefront() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="max-w-2xl">
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight sm:text-4xl">
-              Welcome back, <span className="text-blue-600">{user.name || "Valued Customer"}</span>
+              Welcome back, <span className="text-blue-600">{customerDetails?.name || user.name || "Customer"}</span>
             </h1>
             <p className="mt-4 text-lg text-slate-500">
               {activeView === 'catalog'
                 ? "Browse your exclusive catalog and negotiated pricing. All orders are processed within 24 hours."
-                : "Track the status of your current and past orders."}
+                : activeView === 'orders'
+                  ? "Track the status of your current and past orders."
+                  : "Review your items and confirm your purchase order details."}
             </p>
 
           </div>
@@ -795,6 +592,259 @@ export function CustomerStorefront() {
               ))}
             </div>
           )
+        ) : activeView === 'checkout' ? (
+          /* CHECKOUT VIEW */
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            {/* Left Column: Items */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">Review Items</h2>
+                <Button variant="ghost" onClick={() => setActiveView('catalog')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                  Add more items
+                </Button>
+              </div>
+
+              {orderItems.length === 0 ? (
+                <div className="bg-white border border-gray-200 rounded-xl p-12 text-center space-y-4">
+                  <div className="h-20 w-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                    <ShoppingCart className="h-10 w-10 text-gray-300" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900">Your cart is empty</h3>
+                  <Button onClick={() => setActiveView('catalog')}>View Catalog</Button>
+                </div>
+              ) : (
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Product</th>
+                        <th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase">Quantity</th>
+                        <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Price</th>
+                        <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {orderItems.map((item) => (
+                        <tr key={item.id}>
+                          <td className="px-6 py-6">
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-gray-900">{item.name}</span>
+                              {item.productSku && <span className="text-xs text-gray-400">SKU: {item.productSku}</span>}
+                            </div>
+                          </td>
+                          <td className="px-6 py-6 text-center">
+                            <div className="flex items-center justify-center gap-3 bg-gray-50 rounded-lg p-1 w-fit mx-auto border border-gray-100 shadow-sm">
+                              <button
+                                className="h-8 w-8 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-white rounded-md transition-all border border-transparent hover:border-gray-200"
+                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              >-</button>
+                              <span className="w-8 text-center font-bold text-gray-900">{item.quantity}</span>
+                              <button
+                                className="h-8 w-8 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-white rounded-md transition-all border border-transparent hover:border-gray-200"
+                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              >+</button>
+                            </div>
+                          </td>
+                          <td className="px-6 py-6 text-right font-medium text-gray-600">
+                            {item.currency === 'INR' ? `Rs. ${item.price.toFixed(2)}` : `${item.currency} ${item.price.toFixed(2)}`}
+                          </td>
+                          <td className="px-6 py-6 text-right font-bold text-gray-900">
+                            {item.currency === 'INR' ? `Rs. ${(item.price * item.quantity).toFixed(2)}` : `${item.currency} ${(item.price * item.quantity).toFixed(2)}`}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Order Notes / PO Block */}
+              <div className="bg-white border border-gray-200 rounded-xl p-8 space-y-8 shadow-sm">
+                <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
+                  <div className="h-8 w-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                    <Package className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900">Order Information</h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <label className="text-sm font-bold text-gray-700 uppercase tracking-wider">Customer PO Number</label>
+                    <Input
+                      placeholder="e.g. PO-2024-001"
+                      value={customerPoNumber}
+                      onChange={(e) => setCustomerPoNumber(e.target.value)}
+                      className="h-12 text-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    />
+                    <p className="text-xs text-gray-400 font-medium">Add your internal reference number for this order.</p>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <label className="text-sm font-bold text-gray-700 uppercase tracking-wider">
+                        {customerDetails?.isBillToSameAsShipTo ? "Billing & Shipping Branch" : "Billing Branch"}
+                      </label>
+                      <select
+                        className="w-full h-12 px-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white text-base shadow-sm"
+                        value={selectedBillingBranch}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSelectedBillingBranch(val);
+                          if (customerDetails?.isBillToSameAsShipTo) {
+                            setSelectedShippingBranch(val);
+                          }
+                        }}
+                      >
+                        <option value="">Select branch...</option>
+                        {branches.map(b => (
+                          <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {!customerDetails?.isBillToSameAsShipTo && (
+                      <div className="space-y-3">
+                        <label className="text-sm font-bold text-gray-700 uppercase tracking-wider">Shipping Branch</label>
+                        <select
+                          className="w-full h-12 px-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white text-base shadow-sm"
+                          value={selectedShippingBranch}
+                          onChange={(e) => setSelectedShippingBranch(e.target.value)}
+                        >
+                          <option value="">Select shipping branch...</option>
+                          {branches.map(b => (
+                            <option key={b.id} value={b.id}>{b.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Address Previews */}
+                {(selectedBillingBranch || selectedShippingBranch) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                    {selectedBillingBranch && (
+                      <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex gap-4 transition-all">
+                        <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-200 flex-shrink-0">
+                          <MapPin className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5">Billing Address</p>
+                          <p className="font-bold text-slate-900 text-base">{branches.find(b => b.id === selectedBillingBranch)?.name}</p>
+                          <p className="text-sm text-slate-500 whitespace-pre-wrap mt-2 leading-relaxed">{branches.find(b => b.id === selectedBillingBranch)?.address || 'No address provided'}</p>
+                        </div>
+                      </div>
+                    )}
+                    {selectedShippingBranch && !customerDetails?.isBillToSameAsShipTo && (
+                      <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex gap-4 transition-all">
+                        <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-200 flex-shrink-0">
+                          <MapPin className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5">Shipping Address</p>
+                          <p className="font-bold text-slate-900 text-base">{branches.find(b => b.id === selectedShippingBranch)?.name}</p>
+                          <p className="text-sm text-slate-500 whitespace-pre-wrap mt-2 leading-relaxed">{branches.find(b => b.id === selectedShippingBranch)?.address || 'No address provided'}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column: Summary & Actions */}
+            <div className="space-y-6 lg:sticky lg:top-24">
+              <Card className="border border-gray-200 rounded-2xl shadow-xl overflow-hidden flex flex-col bg-white">
+                <div className="p-8 border-b border-gray-100 bg-gray-50/50">
+                  <h3 className="text-lg font-black text-gray-900 uppercase tracking-wider">Order Summary</h3>
+                </div>
+                <div className="p-8 space-y-6">
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-gray-600 font-medium">
+                      <span>Subtotal</span>
+                      <span className="text-gray-900">{orderCurrency} {baseTotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-gray-500">
+                      <span>CGST (9%)</span>
+                      <span>{orderCurrency} {cgstTotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-gray-500">
+                      <span>SGST (9%)</span>
+                      <span>{orderCurrency} {sgstTotal.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-gray-100">
+                    <div className="flex justify-between items-end">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Total Payable</span>
+                        <span className="text-3xl font-black text-blue-600">{orderCurrency} {finalTotal.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Terms Summary */}
+                {customerDetails && (
+                  <div className="px-8 py-6 bg-amber-50/50 border-t border-amber-100 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="h-1.5 w-1.5 bg-amber-500 rounded-full"></span>
+                      <h4 className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Agreed Commercials</h4>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-amber-600 font-bold uppercase">Payment</span>
+                        <span className="text-sm font-bold text-amber-900">{customerDetails.paymentTerms ? `Net ${customerDetails.paymentTerms} Days` : 'Standard'}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-amber-600 font-bold uppercase">Delivery</span>
+                        <span className="text-sm font-bold text-amber-900">{customerDetails.deliveryTime ? `${customerDetails.deliveryTime} Days` : 'Standard'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="p-8 pt-4">
+                  <Button
+                    onClick={confirmOrder}
+                    disabled={isSubmitting || orderItems.length === 0 || !selectedBillingBranch || !selectedShippingBranch}
+                    className="w-full h-16 bg-slate-900 hover:bg-slate-800 text-white font-black text-lg shadow-2xl hover:translate-y-[-2px] transition-all duration-200 rounded-xl"
+                  >
+                    {isSubmitting ? (
+                      <div className="flex items-center gap-3">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                        <span>PROCESSING...</span>
+                      </div>
+                    ) : (
+                      "PLACE PURCHASE ORDER"
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full mt-4 h-11 text-gray-500 font-semibold hover:text-red-500 hover:bg-red-50 transition-colors"
+                    onClick={() => setActiveView('catalog')}
+                    disabled={isSubmitting}
+                  >
+                    Cancel and Return to Catalog
+                  </Button>
+                </div>
+              </Card>
+
+              {/* Trust/Policy Card */}
+              <div className="bg-blue-600 rounded-2xl p-6 text-white shadow-lg overflow-hidden relative">
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 bg-white/10 rounded-full blur-2xl"></div>
+                <div className="relative flex gap-4">
+                  <Package className="h-6 w-6 text-blue-200 mt-1 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-bold text-base">Formal Order Protocol</h4>
+                    <p className="text-xs text-blue-100 mt-2 leading-relaxed font-medium">
+                      Placing this order creates a legally binding purchase intent in our ERP. A digitally signed copy will be sent to your procurement office.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           /* ORDERS VIEW */
           <div className="space-y-6">

@@ -5,11 +5,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, Settings, Plus, AlertTriangle } from "lucide-react"
-import { fetchCustomers, createCustomer, fetchCustomerUsers, createCustomerUser, updateCustomerUser } from "@/lib/api"
+import { ArrowLeft, Settings, Plus, AlertTriangle, Trash2 } from "lucide-react"
+import { fetchCustomers, createCustomer, fetchCustomerUsers, createCustomerUser, updateCustomerUser, deleteCustomerUser } from "@/lib/api"
 import { toast } from "sonner"
 import { EditCustomerDialog } from "../edit-customer-dialog"
 import { CustomerPricingManagement } from "../customer-pricing-management"
+import { DeleteConfirmationDialog } from "../delete-confirmation-dialog"
 
 interface CustomersSectionProps {
     activeStore: any
@@ -22,6 +23,7 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
     const [customerViewMode, setCustomerViewMode] = useState<'list' | 'admins' | 'pricing'>('list')
     const [customerAdmins, setCustomerAdmins] = useState<any[]>([])
     const [editingAdmin, setEditingAdmin] = useState<any>(null)
+    const [deletingAdminId, setDeletingAdminId] = useState<string | null>(null)
 
     useEffect(() => {
         loadCustomers()
@@ -137,6 +139,20 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
             toast.success("User updated successfully!");
         } catch (err: any) {
             toast.error("Failed to update user: " + err.message);
+        }
+    }
+
+    const handleDeleteAdmin = async () => {
+        if (!activeCustomer || !deletingAdminId) return;
+
+        try {
+            await deleteCustomerUser(activeCustomer.id, deletingAdminId);
+            await loadCustomerAdmins(activeCustomer.id);
+            toast.success("Admin deleted successfully!");
+        } catch (err: any) {
+            toast.error("Failed to delete admin: " + err.message);
+        } finally {
+            setDeletingAdminId(null);
         }
     }
 
@@ -356,8 +372,16 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                                                         {user.status}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-sm text-right">
+                                                <td className="px-6 py-4 text-sm text-right space-x-2">
                                                     <Button variant="outline" size="sm" onClick={() => setEditingAdmin(user)}>Edit</Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                        onClick={() => setDeletingAdminId(user.id)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -379,6 +403,14 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                     />
                 )
             }
+
+            <DeleteConfirmationDialog
+                open={!!deletingAdminId}
+                onOpenChange={(open) => !open && setDeletingAdminId(null)}
+                onConfirm={handleDeleteAdmin}
+                title="Delete Customer Admin"
+                description="Are you sure you want to delete this customer admin? They will lose access to the storefront immediately."
+            />
         </div>
     )
 }
