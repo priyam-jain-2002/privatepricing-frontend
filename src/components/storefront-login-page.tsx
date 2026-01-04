@@ -271,7 +271,7 @@ export function StorefrontLoginPage({ storeName = "Customer Portal", storeId }: 
                                         onChange={(e) => setOtp(e.target.value)}
                                         required
                                         maxLength={6}
-                                        className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-center text-lg tracking-widest"
+                                        className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -339,7 +339,7 @@ export function StorefrontLoginPage({ storeName = "Customer Portal", storeId }: 
                                         onChange={(e) => setOtp(e.target.value)}
                                         required
                                         maxLength={6}
-                                        className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-center text-lg tracking-widest"
+                                        className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                                     />
                                 </div>
                                 {error && (

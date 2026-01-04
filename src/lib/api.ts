@@ -294,11 +294,11 @@ export async function sendStorefrontVerificationCode(storeId: string, email: str
     });
 }
 
-export async function sendStorefrontPasswordResetCode(storeId: string, email: string) {
+export async function sendStorefrontPasswordResetCode(storeId: string | undefined | null, email: string) {
     return fetchAPI('/storefront/auth/password-reset/send', {
         method: 'POST',
         body: JSON.stringify({ storeId, email })
-    });
+    })
 }
 
 export async function verifyStorefrontLoginCode(storeId: string, email: string, code: string) {

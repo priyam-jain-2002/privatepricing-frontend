@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { fetchAPI, sendStorefrontVerificationCode, sendStorefrontPasswordResetCode, verifyStorefrontLoginCode } from "@/lib/api"
+import { fetchAPI, sendStorefrontVerificationCode, sendStorefrontPasswordResetCode, verifyStorefrontLoginCode, resetStorefrontPassword } from "@/lib/api"
 import { useEffect } from "react"
 import { Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 interface LoginPageProps {
     storeName?: string
@@ -99,39 +100,75 @@ export function LoginPage({ storeName = "Private Pricing OS" }: LoginPageProps) 
     }
 
     const handleForgotPassword = async () => {
-        // Logic: We MUST know storeId to send email? 
-        // UserService (Admin) is global? BUT StorefrontService needs storeId.
-        // Problem: "Forgot Password" on generic admin login page where user hasn't logged in yet means we don't know storeId.
-        // BUT, we ask for email. 
-        // The backend `sendPasswordResetCode` logic can find the user -> get storeId -> send email.
-        // Wait, `StorefrontService.sendPasswordResetCode` signature is (storeId, email).
-        // If we don't know storeId, we can't use it easily.
-        // However, most admins are owners of a store.
-        // Ideally, we'd have a public endpoint `/auth/forgot-password` that takes just EMAIL.
-        // Current implementation relies on `storeId`.
-        // For now, I will skip implementing "Forgot Password" on this specific page UNLESS I can get the storeId.
-        // Actually, I can fix this by later making `storeId` optional in backend service if it finds a unique user.
-        // Or, I simply tell the user "Contact Support" or implement a smarter endpoint.
-        // BUT, User explicitly asked for "fix /login page". 
-        // Assuming "fix" means "make it work with verification".
-        // I will implement "Forgot Password" if I can, but Priority 1 is Verification.
+        if (!email) {
+            setError("Please enter your email first to reset password.")
+            return;
+        }
 
-        // NOTE: The previous `StorefrontLoginPage` works because it's bound to a specific store (via subdomain/path).
-        // This `LoginPage` is global.
-        // I'll leave "Forgot Password" button as "Coming Soon" or unimplemented for now to avoid breaking changes, OR
-        // I can fetch user's storeId via a pre-check?
-        // Let's stick to solving the Verification Block first.
+        setLoading(true)
+        setError(null)
+        try {
+            // Send without storeId (Backend finds it for Admin)
+            const res = await sendStorefrontPasswordResetCode(null, email)
 
-        alert("Please contact support to reset your admin password for now.")
+            if (res.storeId) {
+                setTempStoreId(res.storeId)
+                setStep('reset-otp')
+                setResendCooldown(30)
+                toast.success("Reset Code Sent", {
+                    description: `Please check ${email} for your code.`
+                })
+            } else {
+                setError("User not found or email delivery failed.")
+            }
+        } catch (err: any) {
+            setError(err.message || "Failed to send reset code.")
+        } finally {
+            setLoading(false)
+        }
     }
 
     const handleResetPassword = async (e: React.FormEvent) => {
-        // ... (Similar to Storefront but needs storeId)
+        e.preventDefault()
+        if (!tempStoreId) return
+
+        setLoading(true)
+        setError(null)
+        try {
+            await resetStorefrontPassword(tempStoreId, email, otp, newPassword)
+            setStep('credentials')
+            setPassword("")
+            setNewPassword("")
+            setOtp("")
+            setError(null)
+            toast.success("Password Reset Successful!", {
+                description: "You can now log in with your new password.",
+                duration: 5000,
+            })
+        } catch (err: any) {
+            setError(err.message || "Failed to reset password.")
+        } finally {
+            setLoading(false)
+        }
     }
 
     const handleResend = async () => {
-        if (!tempStoreId) return
-        await triggerSendCode(tempStoreId, email, 'verification')
+        if (!tempStoreId && step !== 'reset-otp') return // Need tempStoreId for verification resend
+        // For reset-otp, we can resend without known storeId if we treat it like initial forgot password? 
+        // Actually, we SAVED tempStoreId in handleForgotPassword response. So we DO have it.
+
+        setResendCooldown(30)
+        try {
+            if (step === 'reset-otp') {
+                // If we have tempStoreId use it, else null
+                await sendStorefrontPasswordResetCode(tempStoreId || null, email)
+                toast.success("Code Resent")
+            } else {
+                if (tempStoreId) await sendStorefrontVerificationCode(tempStoreId, email)
+            }
+        } catch (e: any) {
+            setError(e.message || "Failed to resend code")
+        }
     }
 
     const finalizeLogin = (data: any) => {
@@ -159,7 +196,9 @@ export function LoginPage({ storeName = "Private Pricing OS" }: LoginPageProps) 
                             {storeName}
                         </CardTitle>
                         <CardDescription>
-                            {step === 'credentials' ? "Sign in to your dashboard" : `Verification code sent to ${email}`}
+                            {step === 'credentials' ? "Sign in to your dashboard" :
+                                step === 'reset-otp' ? "Enter code and new password" :
+                                    `Verification code sent to ${email}`}
                         </CardDescription>
                     </CardHeader>
 
@@ -216,6 +255,74 @@ export function LoginPage({ storeName = "Private Pricing OS" }: LoginPageProps) 
                                 </Button>
                             </CardFooter>
                         </form>
+                    ) : step === 'reset-otp' ? (
+                        <form onSubmit={handleResetPassword}>
+                            <CardContent className="space-y-6 relative pb-8">
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center ml-1">
+                                        <Label htmlFor="otp" className="text-slate-700 font-medium">Reset Code</Label>
+                                        <button
+                                            type="button"
+                                            onClick={() => setStep('credentials')}
+                                            className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                    <Input
+                                        id="otp"
+                                        type="text"
+                                        placeholder="123456"
+                                        value={otp}
+                                        onChange={(e) => setOtp(e.target.value)}
+                                        required
+                                        maxLength={6}
+                                        className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="new-password" className="text-slate-700 font-medium ml-1">New Password</Label>
+                                    <Input
+                                        id="new-password"
+                                        type="password"
+                                        placeholder="New Password"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        required
+                                        className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                    />
+                                </div>
+                                {error && (
+                                    <div className="text-sm font-medium text-red-600 bg-red-50 p-4 rounded-xl border border-red-100 animate-in fade-in slide-in-from-top-2">
+                                        {error}
+                                    </div>
+                                )}
+                            </CardContent>
+                            <CardFooter className="flex flex-col gap-4 pb-10">
+                                <Button
+                                    type="submit"
+                                    className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-all duration-200 shadow-lg shadow-blue-600/20 active:scale-[0.98]"
+                                    disabled={loading}
+                                >
+                                    {loading ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                            Resetting...
+                                        </>
+                                    ) : (
+                                        "Reset Password"
+                                    )}
+                                </Button>
+                                <button
+                                    type="button"
+                                    onClick={handleResend}
+                                    className="text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled={resendCooldown > 0}
+                                >
+                                    {resendCooldown > 0 ? `Resend Code in ${resendCooldown}s` : "Resend Code"}
+                                </button>
+                            </CardFooter>
+                        </form>
                     ) : (
                         <form onSubmit={handleVerifyCode}>
                             <CardContent className="space-y-6 relative pb-8">
@@ -238,7 +345,7 @@ export function LoginPage({ storeName = "Private Pricing OS" }: LoginPageProps) 
                                         onChange={(e) => setOtp(e.target.value)}
                                         required
                                         maxLength={6}
-                                        className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-center text-lg tracking-widest"
+                                        className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                                     />
                                 </div>
                                 {error && (
