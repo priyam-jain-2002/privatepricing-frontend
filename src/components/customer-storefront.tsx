@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { fetchAPI, getUserFromToken, createStorefrontOrder, fetchStorefrontOrders, fetchStorefrontCustomer, fetchStorefrontBranches, fetchStorefrontStore } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { PayOrderDialog } from "@/components/order-invoice-dialog"
+import { analytics } from "@/lib/analytics"
 import {
   Select,
   SelectContent,
@@ -218,6 +219,7 @@ export function CustomerStorefront() {
     setProducts(products.map(p => {
       if (p.id === id) {
         const q = Math.max(0, newQty)
+
         return { ...p, quantity: q }
       }
       return p
@@ -397,6 +399,21 @@ export function CustomerStorefront() {
       </div>
     )
   }
+
+  // Track Session Drop / Page Leave with Cart
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && totalItems > 0) {
+        // analytics.capture('page_leave', {
+        //   has_cart_items: true,
+        //   cart_value: finalTotal,
+        //   item_count: totalItems
+        // })
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [totalItems, finalTotal])
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">

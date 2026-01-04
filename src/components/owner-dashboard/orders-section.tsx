@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card"
 import { History } from "lucide-react"
 import { fetchAllOrders, updateOrderStatus } from "@/lib/api"
 import { PayOrderDialog } from "../order-invoice-dialog"
+import { analytics } from "@/lib/analytics"
 import { toast } from "sonner"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 
@@ -124,6 +125,22 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                                             onValueChange={async (value) => {
                                                 try {
                                                     await updateOrderStatus(activeStore.id, order.id, value);
+
+                                                    const props: any = {
+                                                        orderId: order.id,
+                                                        oldStatus: order.status,
+                                                        newStatus: value
+                                                    }
+
+                                                    if (value === 'completed' || value === 'cancelled') {
+                                                        const created = new Date(order.createdAt).getTime()
+                                                        const now = new Date().getTime()
+                                                        const durationSeconds = Math.floor((now - created) / 1000)
+                                                        props.duration_seconds = durationSeconds
+                                                    }
+
+                                                    analytics.capture('order_status_updated', props);
+
                                                     await loadOrders();
                                                     toast.success("Order status updated");
                                                 } catch (err: any) {

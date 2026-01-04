@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { useState, useEffect } from "react"
 import { fetchProducts, getCustomerPricings, createCustomerPricing, updateCustomerPricing, fetchCustomer } from "@/lib/api"
+import { analytics } from "@/lib/analytics"
 import { logger } from "@/lib/logger"
 import { Loader2, Save, Check, Plus, Search, Calendar as CalendarIcon } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
@@ -42,6 +43,10 @@ export function CustomerPricingManagement({ storeId, customerId, customer }: Cus
 
   useEffect(() => {
     loadCustomerData()
+    analytics.capture('customer_pricing_viewed', {
+      customerId,
+      storeId
+    })
   }, [storeId, customerId])
 
   // Load ONLY customer-specific pricing records (assigned products)

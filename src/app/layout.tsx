@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { ErrorMonitor } from "@/components/error-monitor";
+import { Suspense } from "react";
+import { PostHogClientProvider } from "@/components/providers/posthog-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,9 +31,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
-        <ErrorMonitor />
-        <Toaster />
+        <Suspense fallback={null}>
+          <PostHogClientProvider>
+            {children}
+            <ErrorMonitor />
+            <Toaster />
+          </PostHogClientProvider>
+        </Suspense>
       </body>
     </html>
   );
