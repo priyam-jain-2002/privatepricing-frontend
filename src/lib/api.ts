@@ -294,10 +294,24 @@ export async function sendStorefrontVerificationCode(storeId: string, email: str
     });
 }
 
+export async function sendStorefrontPasswordResetCode(storeId: string, email: string) {
+    return fetchAPI('/storefront/auth/password-reset/send', {
+        method: 'POST',
+        body: JSON.stringify({ storeId, email })
+    });
+}
+
 export async function verifyStorefrontLoginCode(storeId: string, email: string, code: string) {
     return fetchAPI('/storefront/auth/verify-code', {
         method: 'POST',
         body: JSON.stringify({ storeId, email, code })
+    });
+}
+
+export async function resetStorefrontPassword(storeId: string, email: string, code: string, newPassword: string) {
+    return fetchAPI('/storefront/auth/password-reset/verify', {
+        method: 'POST',
+        body: JSON.stringify({ storeId, email, code, newPassword })
     });
 }
 
