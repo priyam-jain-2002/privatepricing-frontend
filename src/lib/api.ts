@@ -287,6 +287,20 @@ export async function loginStorefront(data: any) {
     });
 }
 
+export async function sendStorefrontVerificationCode(storeId: string, email: string) {
+    return fetchAPI('/storefront/auth/send-code', {
+        method: 'POST',
+        body: JSON.stringify({ storeId, email })
+    });
+}
+
+export async function verifyStorefrontLoginCode(storeId: string, email: string, code: string) {
+    return fetchAPI('/storefront/auth/verify-code', {
+        method: 'POST',
+        body: JSON.stringify({ storeId, email, code })
+    });
+}
+
 export async function fetchAllOrders(storeId: string) {
     return fetchAPI(`/stores/${storeId}/orders`, { headers: getAuthHeaders() });
 }

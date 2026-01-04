@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { loginStorefront } from "@/lib/api"
+import { loginStorefront, sendStorefrontVerificationCode, verifyStorefrontLoginCode } from "@/lib/api"
 import { Loader2 } from "lucide-react"
 
 interface StorefrontLoginPageProps {
@@ -16,56 +16,103 @@ interface StorefrontLoginPageProps {
 
 export function StorefrontLoginPage({ storeName = "Customer Portal", storeId }: StorefrontLoginPageProps) {
     const router = useRouter()
+    const [step, setStep] = useState<'credentials' | 'otp'>('credentials')
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
+    const [otp, setOtp] = useState("")
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [resendCooldown, setResendCooldown] = useState(0)
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    useEffect(() => {
+        if (resendCooldown > 0) {
+            const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000)
+            return () => clearTimeout(timer)
+        }
+    }, [resendCooldown])
+
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
         setError(null)
-
         try {
+            // Standard Email + Password Login
             const data = await loginStorefront({
                 storeId,
                 email,
                 password
             })
 
-            if (data && data.accessToken) {
-                // Store in Local Storage
-                localStorage.setItem('access_token', data.accessToken)
-                if (data.refreshToken) {
-                    localStorage.setItem('refresh_token', data.refreshToken)
-                }
-
-                // Keep role as string for consistency
-                const roleNum = typeof data.user?.role === 'number' ? data.user.role : Number(data.user?.role);
-                localStorage.setItem('user_role', String(roleNum));
-
-                if (data.redirect) {
-                    router.push(data.redirect)
-                } else if (roleNum === 0) {
-                    // Explicit Store Owner Redirection
-                    router.push('/dashboard')
-                } else {
-                    // Default Customer Flow
-                    router.push('/storefront')
-                }
+            if (data.requiresVerification) {
+                // Backend rejected login but triggered OTP. Move to OTP step.
+                setStep('otp')
+                setResendCooldown(30)
+            } else if (data.accessToken) {
+                // Success
+                finalizeLogin(data)
             } else {
                 setError("Invalid credentials.")
             }
         } catch (err: any) {
-            setError("Failed to login. Please check your credentials.")
+            setError(err.message || "Failed to login.")
         } finally {
             setLoading(false)
         }
     }
 
+    const handleVerifyCode = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setLoading(true)
+        setError(null)
+
+        try {
+            // Verify Logic (Same as before, but implies verification + login)
+            const data = await verifyStorefrontLoginCode(storeId, email, otp)
+
+            if (data && data.accessToken) {
+                finalizeLogin(data)
+            } else {
+                setError("Invalid verification code.")
+            }
+        } catch (err: any) {
+            setError(err.message || "Failed to verify code.")
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const finalizeLogin = (data: any) => {
+        localStorage.setItem('access_token', data.accessToken)
+        if (data.refreshToken) {
+            localStorage.setItem('refresh_token', data.refreshToken)
+        }
+        const roleNum = typeof data.user?.role === 'number' ? data.user.role : Number(data.user?.role);
+        localStorage.setItem('user_role', String(roleNum));
+
+        if (data.redirect) {
+            router.push(data.redirect)
+        } else if (roleNum === 0) {
+            router.push('/dashboard')
+        } else {
+            router.push('/storefront')
+        }
+    }
+
+    const handleResend = async () => {
+        // Do not set global loading, just trigger resend and cooldown
+        setResendCooldown(30)
+        try {
+            await sendStorefrontVerificationCode(storeId, email)
+        } catch (err) {
+            console.error(err)
+            setResendCooldown(0) // Reset if failed so they can try again
+            setError("Failed to resend code")
+        }
+    }
+
     return (
         <div className="flex items-center justify-center min-h-screen p-4 bg-slate-50 relative overflow-hidden">
-            {/* Ambient Background Elements - subtle colors for light theme storefront */}
+            {/* Ambient Background Elements */}
             <div className="absolute top-0 -left-4 w-96 h-96 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob"></div>
             <div className="absolute top-0 -right-4 w-96 h-96 bg-indigo-50 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-2000"></div>
             <div className="absolute -bottom-8 left-20 w-96 h-96 bg-blue-50 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-4000"></div>
@@ -82,63 +129,120 @@ export function StorefrontLoginPage({ storeName = "Customer Portal", storeId }: 
                         <CardTitle className="text-3xl font-extrabold tracking-tight text-slate-900">
                             {storeName}
                         </CardTitle>
-
+                        <CardDescription>
+                            {step === 'credentials' ? "Sign in with your password" : `Verification required. Code sent to ${email}`}
+                        </CardDescription>
                     </CardHeader>
-                    <form onSubmit={handleSubmit}>
-                        <CardContent className="space-y-6 relative pb-8">
-                            <div className="space-y-2">
-                                <Label htmlFor="email" className="text-slate-700 font-medium ml-1">Email Address</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="name@example.com"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                    className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between ml-1">
-                                    <Label htmlFor="password" className="text-slate-700 font-medium">Password</Label>
-                                    <button type="button" className="text-xs text-blue-600 hover:text-blue-700 font-semibold transition-colors">Request Access</button>
+
+                    {step === 'credentials' ? (
+                        <form onSubmit={handleLogin}>
+                            <CardContent className="space-y-6 relative pb-8">
+                                <div className="space-y-2">
+                                    <Label htmlFor="email" className="text-slate-700 font-medium ml-1">Email Address</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        placeholder="name@company.com"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                        className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                    />
                                 </div>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    placeholder="••••••••"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                    className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                                />
-                            </div>
-                            {error && (
-                                <div className="text-sm font-medium text-red-600 bg-red-50 p-4 rounded-xl border border-red-100 animate-in fade-in slide-in-from-top-2">
-                                    {error}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between ml-1">
+                                        <Label htmlFor="password" className="text-slate-700 font-medium">Password</Label>
+                                    </div>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        placeholder="••••••••"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                        className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                    />
                                 </div>
-                            )}
-                        </CardContent>
-                        <CardFooter className="flex flex-col gap-4 pb-10">
-                            <Button
-                                type="submit"
-                                className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-all duration-200 shadow-lg shadow-blue-600/20 active:scale-[0.98]"
-                                disabled={loading}
-                            >
-                                {loading ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                        Verifying...
-                                    </>
-                                ) : (
-                                    "Sign In to Store"
+                                {error && (
+                                    <div className="text-sm font-medium text-red-600 bg-red-50 p-4 rounded-xl border border-red-100 animate-in fade-in slide-in-from-top-2">
+                                        {error}
+                                    </div>
                                 )}
-                            </Button>
-                            <p className="text-center text-slate-400 text-xs font-medium">
-                                Restricted Access. Exclusive for {storeName} Partners.
-                            </p>
-                        </CardFooter>
-                    </form>
+                            </CardContent>
+                            <CardFooter className="flex flex-col gap-4 pb-10">
+                                <Button
+                                    type="submit"
+                                    className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-all duration-200 shadow-lg shadow-blue-600/20 active:scale-[0.98]"
+                                    disabled={loading}
+                                >
+                                    {loading ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                            Signing In...
+                                        </>
+                                    ) : (
+                                        "Sign In"
+                                    )}
+                                </Button>
+                            </CardFooter>
+                        </form>
+                    ) : (
+                        <form onSubmit={handleVerifyCode}>
+                            <CardContent className="space-y-6 relative pb-8">
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center ml-1">
+                                        <Label htmlFor="otp" className="text-slate-700 font-medium">Verification Code</Label>
+                                        <button
+                                            type="button"
+                                            onClick={() => setStep('credentials')}
+                                            className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                        >
+                                            Change Email
+                                        </button>
+                                    </div>
+                                    <Input
+                                        id="otp"
+                                        type="text"
+                                        placeholder="123456"
+                                        value={otp}
+                                        onChange={(e) => setOtp(e.target.value)}
+                                        required
+                                        maxLength={6}
+                                        className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-center text-lg tracking-widest"
+                                    />
+                                </div>
+                                {error && (
+                                    <div className="text-sm font-medium text-red-600 bg-red-50 p-4 rounded-xl border border-red-100 animate-in fade-in slide-in-from-top-2">
+                                        {error}
+                                    </div>
+                                )}
+                            </CardContent>
+                            <CardFooter className="flex flex-col gap-4 pb-10">
+                                <Button
+                                    type="submit"
+                                    className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-all duration-200 shadow-lg shadow-blue-600/20 active:scale-[0.98]"
+                                    disabled={loading}
+                                >
+                                    {loading ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                            Verifying...
+                                        </>
+                                    ) : (
+                                        "Verify & Sign In"
+                                    )}
+                                </Button>
+                                <button
+                                    type="button"
+                                    onClick={handleResend}
+                                    className="text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled={resendCooldown > 0}
+                                >
+                                    {resendCooldown > 0 ? `Resend Code in ${resendCooldown}s` : "Resend Code"}
+                                </button>
+                            </CardFooter>
+                        </form>
+                    )}
                 </Card>
             </div>
         </div>
