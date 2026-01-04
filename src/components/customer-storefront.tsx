@@ -9,7 +9,7 @@ import { toast } from "sonner"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { fetchAPI, getUserFromToken, createStorefrontOrder, fetchStorefrontOrders, fetchCustomer } from "@/lib/api"
+import { fetchAPI, getUserFromToken, createStorefrontOrder, fetchStorefrontOrders, fetchStorefrontCustomer, fetchStorefrontBranches, fetchStorefrontStore } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { PayOrderDialog } from "@/components/order-invoice-dialog"
 import {
@@ -115,9 +115,7 @@ export function CustomerStorefront() {
       // 2. Fetch Store Info
       try {
         if (tokStoreId) {
-          const currentStore = await fetchAPI(`/stores/${tokStoreId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
+          const currentStore = await fetchStorefrontStore(tokStoreId)
           if (currentStore) {
             setStoreName(currentStore.name)
             if (currentStore.subdomain) setSubdomain(currentStore.subdomain)
@@ -146,7 +144,7 @@ export function CustomerStorefront() {
           fetchAPI(`/storefront/customers/${authContext?.customer?.id}/pricing`, {
             headers: { Authorization: `Bearer ${accessToken}` }
           }),
-          fetchCustomer(authContext!.customer!.id)
+          fetchStorefrontCustomer(authContext!.customer!.id)
         ]);
 
         setCustomerDetails(custData);
@@ -206,9 +204,7 @@ export function CustomerStorefront() {
       try {
         // We can reuse the fetchBranches from api.ts which calls /customers/:cid/branches
         // Requires the user (even customer user) to have access to this endpoint
-        const data = await fetchAPI(`/customers/${authContext?.customer?.id}/branches`, {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        })
+        const data = await fetchStorefrontBranches(authContext!.customer!.id)
         setBranches(data)
       } catch (err) {
         console.error("Failed to load branches", err)

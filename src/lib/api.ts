@@ -346,6 +346,18 @@ export async function fetchStorefrontOrders(customerId: string) {
     return fetchAPI(`/storefront/customers/${customerId}/orders`, { headers: getAuthHeaders() });
 }
 
+export async function fetchStorefrontCustomer(customerId: string) {
+    return fetchAPI(`/storefront/customers/${customerId}`, { headers: getAuthHeaders() });
+}
+
+export async function fetchStorefrontBranches(customerId: string) {
+    return fetchAPI(`/storefront/customers/${customerId}/branches`, { headers: getAuthHeaders() });
+}
+
+export async function fetchStorefrontStore(storeId: string) {
+    return fetchAPI(`/storefront/stores/${storeId}`, { headers: getAuthHeaders() });
+}
+
 export async function deleteUser(userId: string) {
     return fetchAPI(`/users/${userId}`, {
         method: 'DELETE',
