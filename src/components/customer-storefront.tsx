@@ -602,68 +602,7 @@ export function CustomerStorefront() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             {/* Left Column: Items */}
             <div className="lg:col-span-2 space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900">Review Items</h2>
-                <Button variant="ghost" onClick={() => setActiveView('catalog')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                  Add more items
-                </Button>
-              </div>
-
-              {orderItems.length === 0 ? (
-                <div className="bg-white border border-gray-200 rounded-xl p-12 text-center space-y-4">
-                  <div className="h-20 w-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
-                    <ShoppingCart className="h-10 w-10 text-gray-300" />
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900">Your cart is empty</h3>
-                  <Button onClick={() => setActiveView('catalog')}>View Catalog</Button>
-                </div>
-              ) : (
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
-                      <tr>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Product</th>
-                        <th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase">Quantity</th>
-                        <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Price</th>
-                        <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Subtotal</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {orderItems.map((item) => (
-                        <tr key={item.id}>
-                          <td className="px-6 py-6">
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-gray-900">{item.name}</span>
-                              {item.productSku && <span className="text-xs text-gray-400">SKU: {item.productSku}</span>}
-                            </div>
-                          </td>
-                          <td className="px-6 py-6 text-center">
-                            <div className="flex items-center justify-center gap-3 bg-gray-50 rounded-lg p-1 w-fit mx-auto border border-gray-100 shadow-sm">
-                              <button
-                                className="h-8 w-8 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-white rounded-md transition-all border border-transparent hover:border-gray-200"
-                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                              >-</button>
-                              <span className="w-8 text-center font-bold text-gray-900">{item.quantity}</span>
-                              <button
-                                className="h-8 w-8 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-white rounded-md transition-all border border-transparent hover:border-gray-200"
-                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              >+</button>
-                            </div>
-                          </td>
-                          <td className="px-6 py-6 text-right font-medium text-gray-600">
-                            {item.currency === 'INR' ? `Rs. ${item.price.toFixed(2)}` : `${item.currency} ${item.price.toFixed(2)}`}
-                          </td>
-                          <td className="px-6 py-6 text-right font-bold text-gray-900">
-                            {item.currency === 'INR' ? `Rs. ${(item.price * item.quantity).toFixed(2)}` : `${item.currency} ${(item.price * item.quantity).toFixed(2)}`}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {/* Order Notes / PO Block */}
+              {/* Order Notes / PO Block - NOW FIRST */}
               <div className="bg-white border border-gray-200 rounded-xl p-8 space-y-8 shadow-sm">
                 <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
                   <div className="h-8 w-8 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -760,6 +699,67 @@ export function CustomerStorefront() {
                   </div>
                 )}
               </div>
+
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">Review Items</h2>
+                <Button variant="ghost" onClick={() => setActiveView('catalog')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                  Add more items
+                </Button>
+              </div>
+
+              {orderItems.length === 0 ? (
+                <div className="bg-white border border-gray-200 rounded-xl p-12 text-center space-y-4">
+                  <div className="h-20 w-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                    <ShoppingCart className="h-10 w-10 text-gray-300" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900">Your cart is empty</h3>
+                  <Button onClick={() => setActiveView('catalog')}>View Catalog</Button>
+                </div>
+              ) : (
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Product</th>
+                        <th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase">Quantity</th>
+                        <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Price</th>
+                        <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {orderItems.map((item) => (
+                        <tr key={item.id}>
+                          <td className="px-6 py-6">
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-gray-900">{item.name}</span>
+                              {item.productSku && <span className="text-xs text-gray-400">SKU: {item.productSku}</span>}
+                            </div>
+                          </td>
+                          <td className="px-6 py-6 text-center">
+                            <div className="flex items-center justify-center gap-3 bg-gray-50 rounded-lg p-1 w-fit mx-auto border border-gray-100 shadow-sm">
+                              <button
+                                className="h-8 w-8 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-white rounded-md transition-all border border-transparent hover:border-gray-200"
+                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              >-</button>
+                              <span className="w-8 text-center font-bold text-gray-900">{item.quantity}</span>
+                              <button
+                                className="h-8 w-8 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-white rounded-md transition-all border border-transparent hover:border-gray-200"
+                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              >+</button>
+                            </div>
+                          </td>
+                          <td className="px-6 py-6 text-right font-medium text-gray-600">
+                            {item.currency === 'INR' ? `Rs. ${item.price.toFixed(2)}` : `${item.currency} ${item.price.toFixed(2)}`}
+                          </td>
+                          <td className="px-6 py-6 text-right font-bold text-gray-900">
+                            {item.currency === 'INR' ? `Rs. ${(item.price * item.quantity).toFixed(2)}` : `${item.currency} ${(item.price * item.quantity).toFixed(2)}`}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* Right Column: Summary & Actions */}
@@ -818,20 +818,20 @@ export function CustomerStorefront() {
                   <Button
                     onClick={confirmOrder}
                     disabled={isSubmitting || orderItems.length === 0 || !selectedBillingBranch || !selectedShippingBranch}
-                    className="w-full h-16 bg-slate-900 hover:bg-slate-800 text-white font-black text-lg shadow-2xl hover:translate-y-[-2px] transition-all duration-200 rounded-xl"
+                    className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold text-base shadow-lg transition-all duration-200 rounded-lg"
                   >
                     {isSubmitting ? (
                       <div className="flex items-center gap-3">
-                        <Loader2 className="h-6 w-6 animate-spin" />
+                        <Loader2 className="h-5 w-5 animate-spin" />
                         <span>PROCESSING...</span>
                       </div>
                     ) : (
-                      "PLACE PURCHASE ORDER"
+                      "Place Purchase Order"
                     )}
                   </Button>
                   <Button
                     variant="ghost"
-                    className="w-full mt-4 h-11 text-gray-500 font-semibold hover:text-red-500 hover:bg-red-50 transition-colors"
+                    className="w-full mt-3 h-10 text-gray-500 font-medium hover:text-red-600 hover:bg-red-50 transition-colors"
                     onClick={() => setActiveView('catalog')}
                     disabled={isSubmitting}
                   >
@@ -840,18 +840,13 @@ export function CustomerStorefront() {
                 </div>
               </Card>
 
-              {/* Trust/Policy Card */}
-              <div className="bg-blue-600 rounded-2xl p-6 text-white shadow-lg overflow-hidden relative">
-                <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 bg-white/10 rounded-full blur-2xl"></div>
-                <div className="relative flex gap-4">
-                  <Package className="h-6 w-6 text-blue-200 mt-1 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-bold text-base">Formal Order Protocol</h4>
-                    <p className="text-xs text-blue-100 mt-2 leading-relaxed font-medium">
-                      Placing this order creates a legally binding purchase intent in our ERP. A digitally signed copy will be sent to your procurement office.
-                    </p>
-                  </div>
-                </div>
+              {/* Trust/Policy Card - Clean and Minimal */}
+              <div className="flex items-start gap-3 p-4 bg-blue-50/50 rounded-lg border border-blue-100/50">
+                <div className="h-2 w-2 mt-2 bg-blue-400 rounded-full flex-shrink-0" />
+                <p className="text-xs text-blue-700 leading-relaxed">
+                  <span className="font-semibold block mb-0.5 text-blue-900">Formal Order Protocol</span>
+                  By placing this order, you confirm a binding purchase agreement. An official copy will be emailed to your procurement department.
+                </p>
               </div>
             </div>
           </div>

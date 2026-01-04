@@ -327,19 +327,16 @@ export async function updateCustomerPricing(storeId: string, customerId: string,
     });
 }
 export async function createStorefrontOrder(storeId: string, customerId: string, branchId: string | undefined | null, data: any) {
+    let url = `/storefront/customers/${customerId}/orders`;
     if (branchId) {
-        return fetchAPI(`/stores/${storeId}/customers/${customerId}/branches/${branchId}/orders`, {
-            method: 'POST',
-            body: JSON.stringify(data),
-            headers: getAuthHeaders()
-        });
-    } else {
-        return fetchAPI(`/stores/${storeId}/customers/${customerId}/orders`, {
-            method: 'POST',
-            body: JSON.stringify(data),
-            headers: getAuthHeaders()
-        });
+        url += `?branchId=${branchId}`;
     }
+
+    return fetchAPI(url, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: getAuthHeaders()
+    });
 }
 
 export async function fetchStorefrontOrders(customerId: string) {
