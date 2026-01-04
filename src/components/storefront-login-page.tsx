@@ -34,12 +34,15 @@ export function StorefrontLoginPage({ storeName = "Customer Portal", storeId }: 
             })
 
             if (data && data.accessToken) {
-                // Store in Session Storage
-                sessionStorage.setItem('access_token', data.accessToken)
+                // Store in Local Storage
+                localStorage.setItem('access_token', data.accessToken)
+                if (data.refreshToken) {
+                    localStorage.setItem('refresh_token', data.refreshToken)
+                }
 
                 // Keep role as string for consistency
                 const roleNum = typeof data.user?.role === 'number' ? data.user.role : Number(data.user?.role);
-                sessionStorage.setItem('user_role', String(roleNum));
+                localStorage.setItem('user_role', String(roleNum));
 
                 if (data.redirect) {
                     router.push(data.redirect)

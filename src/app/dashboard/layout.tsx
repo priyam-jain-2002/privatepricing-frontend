@@ -27,8 +27,9 @@ function DashboardSidebar() {
     const isActive = (href: string) => pathname.startsWith(href)
 
     const handleLogout = () => {
-        sessionStorage.removeItem('access_token');
-        sessionStorage.removeItem('user_role');
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user_role');
         window.location.href = '/login';
     }
 

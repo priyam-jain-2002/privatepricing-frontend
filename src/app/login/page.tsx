@@ -11,8 +11,8 @@ export default function OwnerLoginPage() {
 
     useEffect(() => {
         // 1. Check if already logged in
-        const token = sessionStorage.getItem('access_token')
-        const role = sessionStorage.getItem('user_role')
+        const token = localStorage.getItem('access_token')
+        const role = localStorage.getItem('user_role')
 
         if (token && role) {
             if (Number(role) === 0) {

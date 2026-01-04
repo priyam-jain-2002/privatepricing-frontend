@@ -81,7 +81,7 @@ export function CustomerStorefront() {
 
     async function init() {
       // 1. Check Session & Decode Token
-      const token = sessionStorage.getItem('access_token')
+      const token = localStorage.getItem('access_token')
       const decodedUser = getUserFromToken()
 
       if (!token || !decodedUser) {
@@ -340,7 +340,9 @@ export function CustomerStorefront() {
   }
 
   const handleLogout = () => {
-    sessionStorage.clear()
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user_role');
     // ... (logout logic unchanged)
     if (subdomain) {
       const protocol = window.location.protocol;

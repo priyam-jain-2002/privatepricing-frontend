@@ -2,17 +2,108 @@ import { logger } from './logger';
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
+export function getAuthToken() {
+    if (typeof window !== 'undefined') {
+        return localStorage.getItem('access_token');
+    }
+    return null;
+}
+
+export function getRefreshToken() {
+    if (typeof window !== 'undefined') {
+        return localStorage.getItem('refresh_token');
+    }
+    return null;
+}
+
+export function setAuthToken(token: string) {
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('access_token', token);
+    }
+}
+
+export function setRefreshToken(token: string) {
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('refresh_token', token);
+    }
+}
+
+export function clearTokens() {
+    if (typeof window !== 'undefined') {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user_role');
+    }
+}
+
+async function refreshAuthToken(): Promise<string | null> {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) return null;
+
+    try {
+        const res = await fetch(`${API_URL}/users/refresh`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ refreshToken }),
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            if (data.accessToken) {
+                setAuthToken(data.accessToken);
+                if (data.refreshToken) {
+                    setRefreshToken(data.refreshToken);
+                }
+                return data.accessToken;
+            }
+        } else {
+            logger.warn('Token refresh failed', { status: res.status });
+            clearTokens();
+        }
+    } catch (e: any) {
+        logger.error('Token refresh error', e?.stack, e);
+        clearTokens();
+    }
+    return null;
+}
+
 export async function fetchAPI(path: string, options: RequestInit = {}) {
     const url = path.startsWith('/') ? `${API_URL}${path}` : `${API_URL}/${path}`;
 
-    try {
-        const res = await fetch(url, {
+    const makeRequest = async (token?: string) => {
+        const headers: any = {
+            'Content-Type': 'application/json',
+            ...options.headers,
+        };
+
+        const authToken = token || getAuthToken();
+        if (authToken) {
+            headers['Authorization'] = `Bearer ${authToken}`;
+        }
+
+        return fetch(url, {
             ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers,
-            },
+            headers,
         });
+    };
+
+    try {
+        let res = await makeRequest();
+
+        if (res.status === 401) {
+            // Attempt refresh
+            logger.info('401 received, attempting refresh...');
+            const newToken = await refreshAuthToken();
+            if (newToken) {
+                logger.info('Refresh successful, retrying request...');
+                res = await makeRequest(newToken);
+            } else {
+                // Refresh failed or no token, throw original error or redirect
+                // We don't directty redirect here to avoid hooks issue, but error will bubble up
+            }
+        }
 
         if (!res.ok) {
             // Try to parse error message from JSON, fallback to status text
@@ -35,22 +126,11 @@ export async function fetchAPI(path: string, options: RequestInit = {}) {
         return text ? JSON.parse(text) : {};
     } catch (error: any) {
         // Log network errors or other fetch exceptions (that weren't thrown above)
-        // If it was already logged above, we re-throw. 
-        // We can check if it's the error object we created.
-        // A simple check is if it's a network error (no response)
         if (error.message && error.message.includes('fetch')) {
             logger.error(`API Network Error: ${path}`, error.stack, { url });
         }
         throw error;
     }
-}
-// ... keep existing fetchAPI ...
-
-export function getAuthToken() {
-    if (typeof window !== 'undefined') {
-        return sessionStorage.getItem('access_token');
-    }
-    return null;
 }
 
 export function parseJwt(token: string) {

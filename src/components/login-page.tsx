@@ -35,9 +35,12 @@ export function LoginPage({ storeName = "Private Pricing OS" }: LoginPageProps) 
 
             // Expecting { accessToken: string, user: ... }
             if (data && data.accessToken) {
-                // Store in Session Storage
-                sessionStorage.setItem('access_token', data.accessToken)
-                sessionStorage.setItem('user_role', String(data.user.role))
+                // Store in Local Storage
+                localStorage.setItem('access_token', data.accessToken)
+                if (data.refreshToken) {
+                    localStorage.setItem('refresh_token', data.refreshToken)
+                }
+                localStorage.setItem('user_role', String(data.user.role))
 
                 // Base Login is strictly for Dashboard access (Owner/Staff)
                 router.push('/dashboard')

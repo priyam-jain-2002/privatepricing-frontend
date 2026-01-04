@@ -13,8 +13,8 @@ export default function StorefrontLoginRoute() {
     useEffect(() => {
         async function loadContext() {
             // 0. Check for existing session
-            const token = sessionStorage.getItem('access_token');
-            const role = sessionStorage.getItem('user_role');
+            const token = localStorage.getItem('access_token');
+            const role = localStorage.getItem('user_role');
 
             if (token) {
                 const roleNum = Number(role);

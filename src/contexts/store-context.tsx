@@ -24,7 +24,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     // Protected routes check
     useEffect(() => {
-        const token = sessionStorage.getItem('access_token');
+        const token = localStorage.getItem('access_token');
         if (!token && !pathname.includes('/login')) {
             // Let the layout or individual pages handle redirect if needed, 
             // but strictly speaking we should probably do it here or in middleware.
@@ -36,7 +36,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const loadStores = async () => {
         setLoading(true)
         try {
-            const token = sessionStorage.getItem('access_token');
+            const token = localStorage.getItem('access_token');
             if (!token) return;
 
             const storesData = await fetchStores()

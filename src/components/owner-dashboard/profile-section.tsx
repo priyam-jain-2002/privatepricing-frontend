@@ -101,7 +101,9 @@ export function ProfileSection() {
                         variant="outline"
                         className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                         onClick={() => {
-                            sessionStorage.clear();
+                            localStorage.removeItem('access_token');
+                            localStorage.removeItem('refresh_token');
+                            localStorage.removeItem('user_role');
                             window.location.href = '/login';
                         }}
                     >
