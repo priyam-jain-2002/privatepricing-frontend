@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,19 +11,33 @@ import { toast } from "sonner"
 import { EditCustomerDialog } from "../edit-customer-dialog"
 import { CustomerPricingManagement } from "../customer-pricing-management"
 import { DeleteConfirmationDialog } from "../delete-confirmation-dialog"
+import { useRouter, useSearchParams, usePathname } from "next/navigation"
 
 interface CustomersSectionProps {
     activeStore: any
 }
 
 export function CustomersSection({ activeStore }: CustomersSectionProps) {
+    const router = useRouter()
+    const pathname = usePathname()
+    const searchParams = useSearchParams()
+
     const [customers, setCustomers] = useState<any[]>([])
-    const [activeCustomer, setActiveCustomer] = useState<any>(null)
-    const [editingCustomer, setEditingCustomer] = useState<any>(null)
-    const [customerViewMode, setCustomerViewMode] = useState<'list' | 'admins' | 'pricing'>('list')
     const [customerAdmins, setCustomerAdmins] = useState<any[]>([])
+
+    // Local UI state (modals)
+    const [editingCustomer, setEditingCustomer] = useState<any>(null)
     const [editingAdmin, setEditingAdmin] = useState<any>(null)
     const [deletingAdminId, setDeletingAdminId] = useState<string | null>(null)
+
+    // URL State Mappings
+    const mode = searchParams.get('mode') || 'list'
+    const activeCustomerId = searchParams.get('customerId')
+
+    const activeCustomer = useMemo(() => {
+        if (!activeCustomerId || customers.length === 0) return null
+        return customers.find(c => c.id === activeCustomerId) || null
+    }, [activeCustomerId, customers])
 
     useEffect(() => {
         loadCustomers()
@@ -38,24 +52,12 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
         }
     }
 
-    // Sync activeCustomer when customers list updates
-    useEffect(() => {
-        if (activeCustomer && customers.length > 0) {
-            const updated = customers.find(c => c.id === activeCustomer.id)
-            if (updated) {
-                if (JSON.stringify(updated) !== JSON.stringify(activeCustomer)) {
-                    setActiveCustomer(updated)
-                }
-            }
-        }
-    }, [customers])
-
     // Load admins when entering admins view
     useEffect(() => {
-        if (customerViewMode === 'admins' && activeCustomer) {
+        if (mode === 'admins' && activeCustomer) {
             loadCustomerAdmins(activeCustomer.id)
         }
-    }, [customerViewMode, activeCustomer])
+    }, [mode, activeCustomer])
 
     const loadCustomerAdmins = async (customerId: string) => {
         try {
@@ -64,6 +66,30 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
         } catch (err) {
             console.error("Failed to load admins", err)
         }
+    }
+
+    const updateUrl = (newParams: Record<string, string | null>) => {
+        const params = new URLSearchParams(searchParams.toString())
+        Object.entries(newParams).forEach(([key, value]) => {
+            if (value === null) {
+                params.delete(key)
+            } else {
+                params.set(key, value)
+            }
+        })
+        router.push(`${pathname}?${params.toString()}`)
+    }
+
+    const navigateToCustomerList = () => {
+        updateUrl({ mode: null, customerId: null })
+    }
+
+    const navigateToAdmins = (customerId: string) => {
+        updateUrl({ mode: 'admins', customerId })
+    }
+
+    const navigateToPricing = (customerId: string) => {
+        updateUrl({ mode: 'pricing', customerId })
     }
 
     const handleCreateCustomer = async (e: React.FormEvent) => {
@@ -160,17 +186,17 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
         <div className="space-y-6">
             <div className="flex items-center gap-4 mb-4">
                 <h1 className="text-3xl font-semibold text-gray-900">
-                    {customerViewMode === 'list' ? "Customers" :
-                        customerViewMode === 'admins' ? `Admins: ${activeCustomer?.name} ` :
+                    {mode === 'list' ? "Customers" :
+                        mode === 'admins' ? `Admins: ${activeCustomer?.name} ` :
                             `Pricing: ${activeCustomer?.name} `
                     }
                 </h1>
                 {/* Contextual Back Button */}
-                {customerViewMode !== 'list' && (
+                {mode !== 'list' && (
                     <Button
                         variant="ghost"
                         className="text-gray-600 hover:bg-gray-100"
-                        onClick={() => setCustomerViewMode('list')}
+                        onClick={navigateToCustomerList}
                     >
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back to Customer List
@@ -180,7 +206,7 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
 
 
             {/* LIST VIEW */}
-            {customerViewMode === 'list' && (
+            {mode === 'list' && (
                 <div className="space-y-6">
                     {/* Add Customer Button */}
                     <div className="flex justify-end">
@@ -249,10 +275,7 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        onClick={() => {
-                                                            setActiveCustomer(customer);
-                                                            setCustomerViewMode('admins');
-                                                        }}
+                                                        onClick={() => navigateToAdmins(customer.id)}
                                                     >
                                                         Manage Admins
                                                     </Button>
@@ -268,10 +291,7 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        onClick={() => {
-                                                            setActiveCustomer(customer);
-                                                            setCustomerViewMode('pricing');
-                                                        }}
+                                                        onClick={() => navigateToPricing(customer.id)}
                                                     >
                                                         Manage Pricing
                                                     </Button>
@@ -296,7 +316,7 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
 
             {/* MANAGE ADMINS VIEW */}
             {
-                customerViewMode === 'admins' && activeCustomer && (
+                mode === 'admins' && activeCustomer && (
                     <div className="space-y-6">
                         {/* Edit User Dialog */}
                         <Dialog open={!!editingAdmin} onOpenChange={(open) => !open && setEditingAdmin(null)}>
@@ -395,7 +415,7 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
 
             {/* MANAGE PRICING VIEW */}
             {
-                customerViewMode === 'pricing' && activeCustomer && activeStore && (
+                mode === 'pricing' && activeCustomer && activeStore && (
                     <CustomerPricingManagement
                         storeId={activeStore.id}
                         customerId={activeCustomer.id}

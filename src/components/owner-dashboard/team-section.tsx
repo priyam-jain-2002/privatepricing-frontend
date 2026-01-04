@@ -8,6 +8,13 @@ import { fetchStoreUsers, createUser, updateUser, deleteUser } from "@/lib/api"
 import { toast } from "sonner"
 import { Trash2 } from "lucide-react"
 import { DeleteConfirmationDialog } from "../delete-confirmation-dialog"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 
 interface TeamSectionProps {
     activeStore: any
@@ -114,15 +121,15 @@ export function TeamSection({ activeStore }: TeamSectionProps) {
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Role</label>
-                        <select
-                            name="role"
-                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            required
-                            defaultValue="4"
-                        >
-                            <option value="4">Store Manager</option>
-                            <option value="5">Order Manager</option>
-                        </select>
+                        <Select name="role" defaultValue="4" required>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="4">Store Manager</SelectItem>
+                                <SelectItem value="5">Order Manager</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <Button type="submit">Add Member</Button>
                 </form>

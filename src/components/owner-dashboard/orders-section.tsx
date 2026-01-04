@@ -1,11 +1,12 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { History } from "lucide-react"
 import { fetchAllOrders, updateOrderStatus } from "@/lib/api"
 import { PayOrderDialog } from "../order-invoice-dialog"
 import { toast } from "sonner"
+import { useRouter, useSearchParams, usePathname } from "next/navigation"
 
 import {
     Select,
@@ -29,9 +30,20 @@ const statusConfig: Record<string, { label: string, variant: "default" | "second
 }
 
 export function OrdersSection({ activeStore }: OrdersSectionProps) {
+    const router = useRouter()
+    const pathname = usePathname()
+    const searchParams = useSearchParams()
+
     const [orders, setOrders] = useState<any[]>([])
     const [showCompletedOrders, setShowCompletedOrders] = useState(false)
-    const [viewingPayOrder, setViewingPayOrder] = useState<any>(null)
+
+    // URL State
+    const activeOrderId = searchParams.get('orderId')
+
+    const viewingPayOrder = useMemo(() => {
+        if (!activeOrderId || orders.length === 0) return null
+        return orders.find(o => o.id === activeOrderId) || null
+    }, [activeOrderId, orders])
 
     useEffect(() => {
         if (activeStore) {
@@ -46,6 +58,16 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
         } catch (err) {
             console.error("Failed to fetch orders", err)
         }
+    }
+
+    const setViewingPayOrder = (order: any | null) => {
+        const params = new URLSearchParams(searchParams.toString())
+        if (order) {
+            params.set('orderId', order.id)
+        } else {
+            params.delete('orderId')
+        }
+        router.push(`${pathname}?${params.toString()}`)
     }
 
     return (

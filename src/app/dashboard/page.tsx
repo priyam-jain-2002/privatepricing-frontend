@@ -1,10 +1,6 @@
-import { StoreDashboard } from "@/components/store-dashboard"
-
-export const metadata = {
-  title: "Store Dashboard",
-  description: "Manage your store",
-}
+"use client"
+import { redirect } from "next/navigation"
 
 export default function DashboardPage() {
-  return <StoreDashboard />
+  redirect("/dashboard/orders")
 }

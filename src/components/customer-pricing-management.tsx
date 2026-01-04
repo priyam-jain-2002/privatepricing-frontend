@@ -10,6 +10,13 @@ import { fetchProducts, getCustomerPricings, createCustomerPricing, updateCustom
 import { Loader2, Save, Check, Plus, Search, Calendar as CalendarIcon } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 
@@ -346,14 +353,18 @@ function PricingRow({ product, initialPricing, onSave, savingId, freightRate }: 
         </div>
       </td>
       <td className="px-6 py-4 text-sm">
-        <select
-          className="text-xs border rounded p-1 w-32"
+        <Select
           value={pricingType}
-          onChange={(e) => handleChange(setPricingType, e.target.value)}
+          onValueChange={(value) => handleChange(setPricingType, value)}
         >
-          <option value="fixed">Fixed Override</option>
-          <option value="profit_margin">Profit Margin %</option>
-        </select>
+          <SelectTrigger className="w-32 h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="fixed">Fixed Override</SelectItem>
+            <SelectItem value="profit_margin">Profit Margin %</SelectItem>
+          </SelectContent>
+        </Select>
       </td>
       <td className="px-6 py-4">
         <div className="flex items-center gap-2">

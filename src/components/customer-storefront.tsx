@@ -12,6 +12,13 @@ import { Input } from "@/components/ui/input"
 import { fetchAPI, getUserFromToken, createStorefrontOrder, fetchStorefrontOrders, fetchCustomer } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { PayOrderDialog } from "@/components/order-invoice-dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { format } from "date-fns"
 interface Product {
   id: string
@@ -684,37 +691,42 @@ export function CustomerStorefront() {
                       <label className="text-sm font-bold text-gray-700 uppercase tracking-wider">
                         {customerDetails?.isBillToSameAsShipTo ? "Billing & Shipping Branch" : "Billing Branch"}
                       </label>
-                      <select
-                        className="w-full h-12 px-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white text-base shadow-sm"
+                      <Select
                         value={selectedBillingBranch}
-                        onChange={(e) => {
-                          const val = e.target.value;
+                        onValueChange={(val) => {
                           setSelectedBillingBranch(val);
                           if (customerDetails?.isBillToSameAsShipTo) {
                             setSelectedShippingBranch(val);
                           }
                         }}
                       >
-                        <option value="">Select branch...</option>
-                        {branches.map(b => (
-                          <option key={b.id} value={b.id}>{b.name}</option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="w-full h-12 px-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 bg-white text-base shadow-sm">
+                          <SelectValue placeholder="Select branch..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {branches.map(b => (
+                            <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     {!customerDetails?.isBillToSameAsShipTo && (
                       <div className="space-y-3">
                         <label className="text-sm font-bold text-gray-700 uppercase tracking-wider">Shipping Branch</label>
-                        <select
-                          className="w-full h-12 px-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white text-base shadow-sm"
+                        <Select
                           value={selectedShippingBranch}
-                          onChange={(e) => setSelectedShippingBranch(e.target.value)}
+                          onValueChange={(val) => setSelectedShippingBranch(val)}
                         >
-                          <option value="">Select shipping branch...</option>
-                          {branches.map(b => (
-                            <option key={b.id} value={b.id}>{b.name}</option>
-                          ))}
-                        </select>
+                          <SelectTrigger className="w-full h-12 px-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 bg-white text-base shadow-sm">
+                            <SelectValue placeholder="Select shipping branch..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {branches.map(b => (
+                              <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     )}
                   </div>

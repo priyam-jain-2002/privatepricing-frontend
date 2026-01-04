@@ -10,15 +10,17 @@ import { fetchProducts, createProduct, updateProduct } from "@/lib/api"
 import { toast } from "sonner"
 import { OperationCostDialog } from "./operation-cost-dialog"
 import { ProductRow } from "./product-row"
+import { useStore } from "@/contexts/store-context"
 
 interface ProductsSectionProps {
     activeStore: any
-    setStores: (stores: any[]) => void
-    stores: any[]
-    setActiveStore: (store: any) => void
 }
 
-export function ProductsSection({ activeStore, setStores, stores, setActiveStore }: ProductsSectionProps) {
+export function ProductsSection({ activeStore }: ProductsSectionProps) {
+    // We can get global store actions from context if needed for updates
+    const { stores, setActiveStore, refreshStores } = useStore()
+
+    // Local state
     const [products, setProducts] = useState<any[]>([])
     const [isAddProductOpen, setIsAddProductOpen] = useState(false)
     const [editingProduct, setEditingProduct] = useState<any>(null)
@@ -94,11 +96,10 @@ export function ProductsSection({ activeStore, setStores, stores, setActiveStore
         <div className="space-y-4">
             <OperationCostDialog
                 store={activeStore}
-                onUpdate={(newPercentage) => {
-                    const updatedStore = { ...activeStore, operationCostPercentage: newPercentage };
-                    const updatedStores = stores.map(s => s.id === activeStore.id ? updatedStore : s);
-                    setStores(updatedStores);
-                    setActiveStore(updatedStore);
+                onUpdate={async (newPercentage) => {
+                    // Refresh stores to get updated percentage
+                    await refreshStores();
+                    toast.success("Operation cost updated");
                 }}
             />
             <div className="flex justify-between items-center">
