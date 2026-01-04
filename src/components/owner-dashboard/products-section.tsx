@@ -193,8 +193,6 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">SKU / HSN</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Base Price (Global)</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Incoming Freight (%)</th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">CGST %</th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">SGST %</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                                     <TooltipProvider>
                                         <Tooltip>
@@ -210,6 +208,8 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
                                         </Tooltip>
                                     </TooltipProvider>
                                 </th>
+                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">CGST %</th>
+                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">SGST %</th>
                                 <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
                             </tr>
                         </thead>

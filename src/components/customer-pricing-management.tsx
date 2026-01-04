@@ -83,16 +83,17 @@ export function CustomerPricingManagement({ storeId, customerId, customer }: Cus
     }
   }
 
-  const handleAddProduct = async (product: any) => {
+  const handleAddProduct = async (product: any, price: number | null, validUntil: Date | undefined) => {
     setAddingId(product.id)
     try {
-      // Create a default pricing record to "Assign" the product
+      // Create pricing with specific values if provided
       const newPricing = await createCustomerPricing(storeId, {
         storeId,
         customerId,
         productId: product.id,
-        sellingPrice: null, // Default: no override
-        profitMarginPercent: null
+        sellingPrice: price,
+        profitMarginPercent: null,
+        effectiveTo: validUntil ? validUntil.toISOString() : undefined
       })
 
       // Add to list and remove from available
@@ -207,27 +208,20 @@ export function CustomerPricingManagement({ storeId, customerId, customer }: Cus
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
                     <th className="px-4 py-3 text-left">Product</th>
-                    <th className="px-4 py-3 text-left">SKU</th>
                     <th className="px-4 py-3 text-right">Base Price</th>
+                    <th className="px-4 py-3 text-right w-[140px]">Override Price</th>
+                    <th className="px-4 py-3 text-left w-[180px]">Valid Until</th>
                     <th className="px-4 py-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filteredAvailable.map(product => (
-                    <tr key={product.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium">{product.name}</td>
-                      <td className="px-4 py-3 text-gray-500">{product.sku}</td>
-                      <td className="px-4 py-3 text-right">₹ {product.basePrice}</td>
-                      <td className="px-4 py-3 text-right">
-                        <Button
-                          size="sm"
-                          onClick={() => handleAddProduct(product)}
-                          disabled={addingId === product.id}
-                        >
-                          {addingId === product.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Assign"}
-                        </Button>
-                      </td>
-                    </tr>
+                    <AddProductRow
+                      key={product.id}
+                      product={product}
+                      onAssign={(price, date) => handleAddProduct(product, price, date)}
+                      isAdding={addingId === product.id}
+                    />
                   ))}
                 </tbody>
               </table>
@@ -238,6 +232,7 @@ export function CustomerPricingManagement({ storeId, customerId, customer }: Cus
     </div>
   )
 }
+
 
 function PricingRow({ product, initialPricing, onSave, savingId, freightRate }: { product: any, initialPricing: any, onSave: (u: any) => void, savingId: string | null, freightRate?: number }) {
   if (!product) return null // Safety check
@@ -476,3 +471,72 @@ function PricingRow({ product, initialPricing, onSave, savingId, freightRate }: 
     </tr>
   )
 }
+
+function AddProductRow({ product, onAssign, isAdding }: { product: any, onAssign: (price: number | null, date: Date | undefined) => void, isAdding: boolean }) {
+  const [overridePrice, setOverridePrice] = useState<string>('')
+  const [validUntil, setValidUntil] = useState<Date | undefined>(undefined)
+
+  return (
+    <tr className="hover:bg-gray-50 group">
+      <td className="px-4 py-3">
+        <div className="font-medium text-gray-900">{product.name}</div>
+        <div className="text-xs text-gray-500">{product.sku}</div>
+      </td>
+      <td className="px-4 py-3 text-right text-sm text-gray-600">
+        ₹ {product.basePrice}
+      </td>
+      <td className="px-4 py-3 text-right">
+        <div className="flex items-center justify-end gap-1">
+          <span className="text-gray-400 text-xs">₹</span>
+          <Input
+            type="number"
+            placeholder="Default"
+            className="h-8 w-24 text-right text-xs"
+            value={overridePrice}
+            onChange={(e) => setOverridePrice(e.target.value)}
+          />
+        </div>
+      </td>
+      <td className="px-4 py-3">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant={"outline"}
+              className={cn(
+                "w-full pl-3 text-left font-normal h-8 text-xs",
+                !validUntil && "text-muted-foreground"
+              )}
+            >
+              {validUntil ? (
+                format(validUntil, "PPP")
+              ) : (
+                <span>Pick a date</span>
+              )}
+              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={validUntil}
+              onSelect={setValidUntil}
+              disabled={(date) => date < new Date()}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </td>
+      <td className="px-4 py-3 text-right">
+        <Button
+          size="sm"
+          onClick={() => onAssign(overridePrice ? parseFloat(overridePrice) : null, validUntil)}
+          disabled={isAdding}
+          className="h-8 text-xs"
+        >
+          {isAdding ? <Loader2 className="h-3 w-3 animate-spin" /> : "Assign"}
+        </Button>
+      </td>
+    </tr>
+  )
+}
+

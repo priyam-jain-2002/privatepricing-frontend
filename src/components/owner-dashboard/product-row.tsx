@@ -100,6 +100,9 @@ export function ProductRow({ product, onUpdate, onEditDetails, operationCostPerc
                     </span>
                 )}
             </td>
+            <td className="px-6 py-4 text-sm text-gray-600 font-medium" title={`Formula: Base Price * (1 + (${baseFreight || 0}% + ${operationCostPercentage}%)/100)`}>
+                {product.currency || 'INR'} {(parseFloat(basePrice || '0') * (1 + (parseFloat(baseFreight || '0') + operationCostPercentage) / 100)).toFixed(2)}
+            </td>
             <td className="px-6 py-4 text-sm text-gray-600">
                 {isEditing ? (
                     <Input
@@ -127,9 +130,6 @@ export function ProductRow({ product, onUpdate, onEditDetails, operationCostPerc
                         {product.sgst || 0}%
                     </span>
                 )}
-            </td>
-            <td className="px-6 py-4 text-sm text-gray-600 font-medium" title={`Formula: Base Price * (1 + (${baseFreight || 0}% + ${operationCostPercentage}%)/100)`}>
-                {product.currency || 'INR'} {(parseFloat(basePrice || '0') * (1 + (parseFloat(baseFreight || '0') + operationCostPercentage) / 100)).toFixed(2)}
             </td>
             <td className="px-6 py-4 text-sm text-right">
                 {isEditing ? (

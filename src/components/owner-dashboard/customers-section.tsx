@@ -184,25 +184,23 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-4 mb-4">
-                <h1 className="text-3xl font-semibold text-gray-900">
-                    {mode === 'list' ? "Customers" :
-                        mode === 'admins' ? `Admins: ${activeCustomer?.name} ` :
-                            `Pricing: ${activeCustomer?.name} `
-                    }
-                </h1>
-                {/* Contextual Back Button */}
-                {mode !== 'list' && (
-                    <Button
-                        variant="ghost"
-                        className="text-gray-600 hover:bg-gray-100"
-                        onClick={navigateToCustomerList}
-                    >
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Customer List
-                    </Button>
-                )}
-            </div>
+            {/* Contextual Back Button */}
+            {mode !== 'list' && (
+                <Button
+                    variant="ghost"
+                    className="text-gray-600 hover:bg-gray-100 -ml-2"
+                    onClick={navigateToCustomerList}
+                >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back
+                </Button>
+            )}
+            <h1 className="text-3xl font-semibold text-gray-900">
+                {mode === 'list' ? "Customers" :
+                    mode === 'admins' ? `Admins: ${activeCustomer?.name} ` :
+                        `Pricing: ${activeCustomer?.name} `
+                }
+            </h1>
 
 
             {/* LIST VIEW */}
