@@ -1,3 +1,4 @@
+"use client"
 import { useEffect, useState } from "react"
 import { StorefrontLoginPage } from "@/components/storefront-login-page"
 import { fetchStores, fetchStoreBySubdomain } from "@/lib/api"

@@ -18,9 +18,11 @@ export async function fetchAPI(path: string, options: RequestInit = {}) {
             // Try to parse error message from JSON, fallback to status text
             const errorData = await res.json().catch(() => null);
             const errorMessage = errorData?.message || errorData?.error || `Request failed with status ${res.status}`;
+            const requestId = res.headers.get('X-Request-ID') || errorData?.requestId;
 
             // Log the API error
             logger.error(`API Error: ${path}`, undefined, {
+                requestId,
                 status: res.status,
                 statusText: res.statusText,
                 error: errorMessage
