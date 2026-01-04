@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { fetchStores } from "@/lib/api"
+import { logger } from "@/lib/logger"
 import { usePathname, useRouter } from "next/navigation"
 
 interface StoreContextType {
@@ -54,7 +55,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 setActiveStore(storesData[0])
             }
         } catch (error: any) {
-            console.error("Failed to fetch stores", error)
+            logger.error("Failed to fetch stores", error.stack, { error })
             if (error.message?.includes('401') || error.message?.includes('403')) {
                 if (window) window.location.href = '/login';
             }

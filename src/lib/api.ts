@@ -1,24 +1,46 @@
+import { logger } from './logger';
+
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 export async function fetchAPI(path: string, options: RequestInit = {}) {
     const url = path.startsWith('/') ? `${API_URL}${path}` : `${API_URL}/${path}`;
 
-    const res = await fetch(url, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            ...options.headers,
-        },
-    });
+    try {
+        const res = await fetch(url, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers,
+            },
+        });
 
-    if (!res.ok) {
-        // Try to parse error message from JSON, fallback to status text
-        const errorData = await res.json().catch(() => null);
-        throw new Error(errorData?.message || errorData?.error || `Request failed with status ${res.status}`);
+        if (!res.ok) {
+            // Try to parse error message from JSON, fallback to status text
+            const errorData = await res.json().catch(() => null);
+            const errorMessage = errorData?.message || errorData?.error || `Request failed with status ${res.status}`;
+
+            // Log the API error
+            logger.error(`API Error: ${path}`, undefined, {
+                status: res.status,
+                statusText: res.statusText,
+                error: errorMessage
+            });
+
+            throw new Error(errorMessage);
+        }
+
+        const text = await res.text();
+        return text ? JSON.parse(text) : {};
+    } catch (error: any) {
+        // Log network errors or other fetch exceptions (that weren't thrown above)
+        // If it was already logged above, we re-throw. 
+        // We can check if it's the error object we created.
+        // A simple check is if it's a network error (no response)
+        if (error.message && error.message.includes('fetch')) {
+            logger.error(`API Network Error: ${path}`, error.stack, { url });
+        }
+        throw error;
     }
-
-    const text = await res.text();
-    return text ? JSON.parse(text) : {};
 }
 // ... keep existing fetchAPI ...
 
@@ -58,7 +80,7 @@ export async function fetchStores() {
 }
 
 export async function fetchStoreBySubdomain(subdomain: string) {
-    console.log(`[API] fetchStoreBySubdomain calling: /stores/subdomain/${subdomain}`);
+    logger.info(`[API] fetchStoreBySubdomain calling: /stores/subdomain/${subdomain}`);
     return fetchAPI(`/stores/subdomain/${subdomain}`);
 }
 

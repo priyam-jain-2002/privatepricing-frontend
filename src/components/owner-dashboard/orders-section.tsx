@@ -56,7 +56,7 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
             const data = await fetchAllOrders(activeStore.id)
             setOrders(data)
         } catch (err) {
-            console.error("Failed to fetch orders", err)
+            onsole.error("Failed to fetch orders", err)
         }
     }
 

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { useState, useEffect } from "react"
 import { fetchProducts, getCustomerPricings, createCustomerPricing, updateCustomerPricing, fetchCustomer } from "@/lib/api"
+import { logger } from "@/lib/logger"
 import { Loader2, Save, Check, Plus, Search, Calendar as CalendarIcon } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -60,7 +61,7 @@ export function CustomerPricingManagement({ storeId, customerId, customer }: Cus
       pricingData.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       setCustomerPricings(pricingData)
     } catch (error) {
-      console.error("Failed to load customer pricing", error)
+      logger.error("Failed to load customer pricing", (error as any).stack, { error })
     } finally {
       setLoading(false)
     }
@@ -117,7 +118,7 @@ export function CustomerPricingManagement({ storeId, customerId, customer }: Cus
       ))
       toast.success("Pricing updated")
     } catch (err) {
-      console.error("Failed to save pricing", err)
+      logger.error("Failed to save pricing", (err as any).stack, { err })
       toast.error("Failed to save change")
     } finally {
       setTimeout(() => setSavingId(null), 1000)

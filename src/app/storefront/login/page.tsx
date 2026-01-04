@@ -1,9 +1,8 @@
-"use client"
-
 import { useEffect, useState } from "react"
 import { StorefrontLoginPage } from "@/components/storefront-login-page"
 import { fetchStores, fetchStoreBySubdomain } from "@/lib/api"
 import { Loader2 } from "lucide-react"
+import { logger } from "@/lib/logger"
 
 export default function StorefrontLoginRoute() {
     const [storeId, setStoreId] = useState<string | null>(null)
@@ -58,12 +57,12 @@ export default function StorefrontLoginRoute() {
                 if (hasSubdomain && subdomain) {
                     // Check 'www'
                     if (subdomain !== 'www') {
-                        console.log(`[Login] Detected subdomain: ${subdomain} from host: ${hostname}`);
+                        logger.info(`[Login] Detected subdomain: ${subdomain} from host: ${hostname}`);
                         try {
                             currentStore = await fetchStoreBySubdomain(subdomain);
-                            console.log(`[Login] Fetched store for subdomain ${subdomain}:`, currentStore);
+                            logger.info(`[Login] Fetched store for subdomain ${subdomain}`, { storeId: currentStore?.id });
                         } catch (e) {
-                            console.warn(`[Login] Failed to find store by subdomain ${subdomain}`, e);
+                            logger.warn(`[Login] Failed to find store by subdomain ${subdomain}`, e);
                         }
                     }
                 }
@@ -96,7 +95,7 @@ export default function StorefrontLoginRoute() {
                                 currentStore = storeByParam;
                             }
                         } catch (e) {
-                            console.warn("Failed to find store by param", storeParam);
+                            logger.warn("Failed to find store by param", { storeParam, error: e });
                         }
                     }
                 }
@@ -121,7 +120,7 @@ export default function StorefrontLoginRoute() {
                     setStoreName(currentStore.name)
                 }
             } catch (err) {
-                console.error("Failed to load store context", err)
+                logger.error("Failed to load store context", undefined, { error: err })
             } finally {
                 setLoading(false)
             }
