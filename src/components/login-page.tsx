@@ -70,9 +70,7 @@ export function LoginPage({ storeName = "Private Pricing OS" }: LoginPageProps) 
                         <CardTitle className="text-3xl font-extrabold tracking-tight text-slate-900">
                             {storeName}
                         </CardTitle>
-                        <CardDescription className="text-slate-500 text-sm font-medium">
-                            Professional enterprise pricing portal
-                        </CardDescription>
+
                     </CardHeader>
                     <form onSubmit={handleSubmit}>
                         <CardContent className="space-y-6 relative pb-8">

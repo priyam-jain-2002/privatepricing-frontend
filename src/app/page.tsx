@@ -45,7 +45,7 @@ export default function StorefrontPage() {
       if (isSubdomain) {
         router.push('/storefront/login');
       } else {
-        router.push('/auth/login');
+        router.push('/login');
       }
     }
   }, [router])

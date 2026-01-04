@@ -29,7 +29,7 @@ function DashboardSidebar() {
     const handleLogout = () => {
         sessionStorage.removeItem('access_token');
         sessionStorage.removeItem('user_role');
-        window.location.href = '/auth/login';
+        window.location.href = '/login';
     }
 
     return (

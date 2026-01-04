@@ -63,8 +63,8 @@ export function StorefrontLoginPage({ storeName = "Customer Portal", storeId }: 
     return (
         <div className="flex items-center justify-center min-h-screen p-4 bg-slate-50 relative overflow-hidden">
             {/* Ambient Background Elements - subtle colors for light theme storefront */}
-            <div className="absolute top-0 -left-4 w-96 h-96 bg-emerald-100 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob"></div>
-            <div className="absolute top-0 -right-4 w-96 h-96 bg-teal-50 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-2000"></div>
+            <div className="absolute top-0 -left-4 w-96 h-96 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob"></div>
+            <div className="absolute top-0 -right-4 w-96 h-96 bg-indigo-50 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-2000"></div>
             <div className="absolute -bottom-8 left-20 w-96 h-96 bg-blue-50 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-4000"></div>
 
             <div className="w-full max-w-md animate-in fade-in zoom-in duration-700 slide-in-from-bottom-8">
@@ -73,15 +73,13 @@ export function StorefrontLoginPage({ storeName = "Customer Portal", storeId }: 
                     <div className="absolute inset-0 bg-gradient-to-br from-white/90 to-transparent pointer-events-none"></div>
 
                     <CardHeader className="space-y-2 text-center relative pt-8">
-                        <div className="mx-auto w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/20">
+                        <div className="mx-auto w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/20">
                             <span className="text-white text-xl font-bold">{storeName.charAt(0)}</span>
                         </div>
                         <CardTitle className="text-3xl font-extrabold tracking-tight text-slate-900">
                             {storeName}
                         </CardTitle>
-                        <CardDescription className="text-slate-500 text-sm font-medium">
-                            Customer Pricing Portal
-                        </CardDescription>
+
                     </CardHeader>
                     <form onSubmit={handleSubmit}>
                         <CardContent className="space-y-6 relative pb-8">
@@ -94,13 +92,13 @@ export function StorefrontLoginPage({ storeName = "Customer Portal", storeId }: 
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
-                                    className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                                    className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                                 />
                             </div>
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between ml-1">
                                     <Label htmlFor="password" className="text-slate-700 font-medium">Password</Label>
-                                    <button type="button" className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold transition-colors">Request Access</button>
+                                    <button type="button" className="text-xs text-blue-600 hover:text-blue-700 font-semibold transition-colors">Request Access</button>
                                 </div>
                                 <Input
                                     id="password"
@@ -109,7 +107,7 @@ export function StorefrontLoginPage({ storeName = "Customer Portal", storeId }: 
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                                    className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                                 />
                             </div>
                             {error && (
@@ -121,7 +119,7 @@ export function StorefrontLoginPage({ storeName = "Customer Portal", storeId }: 
                         <CardFooter className="flex flex-col gap-4 pb-10">
                             <Button
                                 type="submit"
-                                className="w-full h-12 text-base bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-all duration-200 shadow-lg shadow-emerald-600/20 active:scale-[0.98]"
+                                className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-all duration-200 shadow-lg shadow-blue-600/20 active:scale-[0.98]"
                                 disabled={loading}
                             >
                                 {loading ? (

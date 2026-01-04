@@ -102,7 +102,7 @@ export function ProfileSection() {
                         className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                         onClick={() => {
                             sessionStorage.clear();
-                            window.location.href = '/auth/login';
+                            window.location.href = '/login';
                         }}
                     >
                         <LogOut className="mr-2 h-4 w-4" />

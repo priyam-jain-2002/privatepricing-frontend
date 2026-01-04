@@ -24,11 +24,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // Protected routes check
     useEffect(() => {
         const token = sessionStorage.getItem('access_token');
-        if (!token && !pathname.includes('/auth/login')) {
+        if (!token && !pathname.includes('/login')) {
             // Let the layout or individual pages handle redirect if needed, 
             // but strictly speaking we should probably do it here or in middleware.
             // For now, mirroring existing behavior:
-            if (window) window.location.href = '/auth/login';
+            if (window) window.location.href = '/login';
         }
     }, [pathname])
 
@@ -56,7 +56,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         } catch (error: any) {
             console.error("Failed to fetch stores", error)
             if (error.message?.includes('401') || error.message?.includes('403')) {
-                if (window) window.location.href = '/auth/login';
+                if (window) window.location.href = '/login';
             }
         } finally {
             setLoading(false)
