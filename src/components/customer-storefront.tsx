@@ -375,6 +375,23 @@ export function CustomerStorefront() {
     }
   }
 
+  // Track Session Drop / Page Leave with Cart
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && totalItems > 0) {
+        // analytics.capture('page_leave', {
+        //   has_cart_items: true,
+        //   cart_value: finalTotal,
+        //   item_count: totalItems
+        // })
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [totalItems, finalTotal])
+
   // --- Render Helpers ---
 
   if (loading && !products.length) {
@@ -400,20 +417,7 @@ export function CustomerStorefront() {
     )
   }
 
-  // Track Session Drop / Page Leave with Cart
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && totalItems > 0) {
-        // analytics.capture('page_leave', {
-        //   has_cart_items: true,
-        //   cart_value: finalTotal,
-        //   item_count: totalItems
-        // })
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-  }, [totalItems, finalTotal])
+
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
