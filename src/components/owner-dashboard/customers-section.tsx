@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { ArrowLeft, Settings, Plus, AlertTriangle, Trash2 } from "lucide-react"
-import { fetchCustomers, createCustomer, fetchCustomerUsers, createCustomerUser, updateCustomerUser, deleteCustomerUser } from "@/lib/api"
+import { fetchCustomers, createCustomer, fetchCustomerUsers, createCustomerUser, updateCustomerUser, deleteCustomerUser, resendCustomerUserInvite } from "@/lib/api"
 import { toast } from "sonner"
 import { EditCustomerDialog } from "../edit-customer-dialog"
 import { CustomerPricingManagement } from "../customer-pricing-management"
@@ -128,15 +128,15 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
         const formData = new FormData(form);
         const name = formData.get('name') as string;
         const email = formData.get('email') as string;
-        const password = formData.get('password') as string;
 
         try {
-            await createCustomerUser(activeCustomer.id, {
+            const payload: any = {
                 name,
                 email,
-                password,
                 role: 1 // Customer Admin
-            });
+            };
+
+            await createCustomerUser(activeCustomer.id, payload);
             await loadCustomerAdmins(activeCustomer.id);
             form.reset();
             toast.success("Admin created successfully!");
@@ -355,10 +355,6 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                                     <label className="text-sm font-medium">Email</label>
                                     <Input name="email" type="email" required placeholder="admin@client.com" />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Password</label>
-                                    <Input name="password" type="password" required minLength={8} />
-                                </div>
                                 <Button type="submit">Create Admin</Button>
                             </form>
                         </div>
@@ -389,8 +385,32 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                                   ${user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                                                         {user.status}
                                                     </span>
+                                                    <div className="mt-1">
+                                                        {!user.isVerified && (
+                                                            <span className="text-xs text-yellow-600 flex items-center gap-1">
+                                                                <div className="h-1.5 w-1.5 rounded-full bg-yellow-500"></div> Pending Invite
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-sm text-right space-x-2">
+                                                    {!user.isVerified && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={async () => {
+                                                                try {
+                                                                    if (!activeCustomer) return;
+                                                                    await resendCustomerUserInvite(activeCustomer.id, user.id);
+                                                                    toast.success("Invitation resent successfully!");
+                                                                } catch (e: any) {
+                                                                    toast.error("Failed to resend: " + e.message);
+                                                                }
+                                                            }}
+                                                        >
+                                                            Resend
+                                                        </Button>
+                                                    )}
                                                     <Button variant="outline" size="sm" onClick={() => setEditingAdmin(user)}>Edit</Button>
                                                     <Button
                                                         variant="ghost"

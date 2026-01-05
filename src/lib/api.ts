@@ -390,9 +390,37 @@ export async function deleteUser(userId: string) {
     });
 }
 
+export async function resendUserInvite(userId: string) {
+    return fetchAPI(`/users/${userId}/resend-invite`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+    });
+}
+
 export async function deleteCustomerUser(customerId: string, userId: string) {
     return fetchAPI(`/customers/${customerId}/users/${userId}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
+    });
+}
+
+export async function resendCustomerUserInvite(customerId: string, userId: string) {
+    return fetchAPI(`/customers/${customerId}/users/${userId}/resend-invite`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+    });
+}
+
+export async function completeUserRegistration(data: { email: string, token: string, password: string }) {
+    return fetchAPI('/users/complete-registration', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    });
+}
+
+export async function completeStorefrontRegistration(data: { storeId: string, email: string, token: string, password: string }) {
+    return fetchAPI('/storefront/auth/complete-registration', {
+        method: 'POST',
+        body: JSON.stringify(data)
     });
 }

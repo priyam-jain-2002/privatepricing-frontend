@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { fetchStoreUsers, createUser, updateUser, deleteUser } from "@/lib/api"
+import { fetchStoreUsers, createUser, updateUser, deleteUser, resendUserInvite } from "@/lib/api"
 import { toast } from "sonner"
 import { Trash2 } from "lucide-react"
 import { DeleteConfirmationDialog } from "../delete-confirmation-dialog"
@@ -44,18 +44,18 @@ export function TeamSection({ activeStore }: TeamSectionProps) {
         const formData = new FormData(form);
         const name = formData.get('name') as string;
         const email = formData.get('email') as string;
-        const password = formData.get('password') as string;
         const roleStr = formData.get('role') as string;
         const roleId = parseInt(roleStr);
 
         try {
-            await createUser({
+            const payload: any = {
                 email,
-                password,
                 name,
                 role: roleId,
                 storeId: activeStore.id
-            });
+            };
+
+            await createUser(payload);
 
             await loadStoreUsers()
             form.reset();
@@ -116,10 +116,6 @@ export function TeamSection({ activeStore }: TeamSectionProps) {
                         <Input name="email" type="email" required placeholder="manager@store.com" />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Password</label>
-                        <Input name="password" type="password" required minLength={8} />
-                    </div>
-                    <div className="space-y-2">
                         <label className="text-sm font-medium">Role</label>
                         <Select name="role" defaultValue="4" required>
                             <SelectTrigger>
@@ -163,11 +159,34 @@ export function TeamSection({ activeStore }: TeamSectionProps) {
                                                 user.role === 5 ? 'Order Manager' :
                                                     user.role === 3 ? 'Branch User' :
                                                         user.role === 1 ? 'Customer Admin' : 'Unknown'}
+                                        <div className="mt-1">
+                                            {!user.isVerified && (
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                    Pending Invite
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
 
                                     <td className="px-6 py-4 text-sm text-right space-x-2">
                                         {user.role !== 0 && (
                                             <>
+                                                {!user.isVerified && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={async () => {
+                                                            try {
+                                                                await resendUserInvite(user.id);
+                                                                toast.success("Invitation resent successfully!");
+                                                            } catch (e: any) {
+                                                                toast.error("Failed to resend: " + e.message);
+                                                            }
+                                                        }}
+                                                    >
+                                                        Resend Invite
+                                                    </Button>
+                                                )}
                                                 <Button variant="outline" size="sm" onClick={() => setEditingStoreUser(user)}>Edit</Button>
                                                 <Button
                                                     variant="ghost"
