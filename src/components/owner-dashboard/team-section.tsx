@@ -106,7 +106,7 @@ export function TeamSection({ activeStore }: TeamSectionProps) {
         <div className="space-y-6">
             <div className="bg-white p-6 rounded-lg border border-gray-200">
                 <h3 className="text-lg font-medium mb-4">Add Team Member</h3>
-                <form onSubmit={handleCreateStoreUser} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <form onSubmit={handleCreateStoreUser} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Name</label>
                         <Input name="name" required placeholder="Jane Doe" />
@@ -127,7 +127,7 @@ export function TeamSection({ activeStore }: TeamSectionProps) {
                             </SelectContent>
                         </Select>
                     </div>
-                    <Button type="submit">Add Member</Button>
+                    <Button type="submit" className="w-full sm:w-auto">Add Member</Button>
                 </form>
             </div>
 
@@ -136,8 +136,8 @@ export function TeamSection({ activeStore }: TeamSectionProps) {
                     <CardTitle>Team Members</CardTitle>
                     <CardDescription>Manage users who have access to this store.</CardDescription>
                 </CardHeader>
-                <div className="overflow-hidden">
-                    <table className="w-full">
+                <div className="overflow-x-auto">
+                    <table className="w-full min-w-[700px]">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Name</th>

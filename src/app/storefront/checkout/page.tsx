@@ -1,10 +1,10 @@
 "use client"
 
 import { useStorefront } from "@/components/storefront/storefront-context"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { createStorefrontOrder, fetchStorefrontStore } from "@/lib/api"
+import { createStorefrontOrder } from "@/lib/api"
 import { Package, ShoppingCart, Loader2, MapPin } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -255,8 +255,8 @@ export default function StorefrontCheckoutPage() {
                                 </Link>
                             </div>
                         ) : (
-                            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                                <table className="w-full">
+                            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm overflow-x-auto">
+                                <table className="w-full min-w-[600px]">
                                     <thead className="bg-gray-50 border-b border-gray-200">
                                         <tr>
                                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Product</th>

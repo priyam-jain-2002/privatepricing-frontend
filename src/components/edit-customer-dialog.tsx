@@ -152,7 +152,7 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: E
                                 {activeCustomer.status || 'Active'}
                             </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Company Name *</Label>
                                 <Input name="name" defaultValue={activeCustomer.name} required className="font-medium" placeholder="Acme Corp" />
@@ -188,7 +188,7 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: E
                                 </div>
                             </div>
                         )}
-                        <div className="grid grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <Label className="text-xs text-muted-foreground uppercase tracking-wider">Delivery Time (Days)</Label>
                                 <Input name="deliveryTime" type="number" min="0" placeholder="e.g. 7" defaultValue={activeCustomer.deliveryTime || ''} />
@@ -197,7 +197,7 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: E
                                 <Label className="text-xs text-muted-foreground uppercase tracking-wider">Payment Terms (Days)</Label>
                                 <Input name="paymentTerms" type="number" min="0" placeholder="e.g. 30" defaultValue={activeCustomer.paymentTerms || ''} />
                             </div>
-                            <div className="col-span-2 bg-gray-50 p-3 rounded-md border flex items-center gap-3">
+                            <div className="col-span-1 sm:col-span-2 bg-gray-50 p-3 rounded-md border flex items-center gap-3">
                                 <Checkbox name="isBillToSameAsShipTo" defaultChecked={activeCustomer.isBillToSameAsShipTo} id="billTo" />
                                 <div className="space-y-0.5">
                                     <Label htmlFor="billTo" className="cursor-pointer font-medium text-gray-900">Same Bill-To/Ship-To Address</Label>
@@ -220,7 +220,7 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: E
                             <h4 className="text-sm font-medium text-gray-900">Freight Configuration</h4>
                             {freightType === 'inclusive' && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Inclusive Active</span>}
                         </div>
-                        <div className="grid grid-cols-2 gap-4 items-start">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
                             <div className="space-y-2">
                                 <Label className="text-xs text-muted-foreground uppercase tracking-wider">Policy</Label>
                                 <Select value={freightType} onValueChange={(v: any) => setFreightType(v)}>
