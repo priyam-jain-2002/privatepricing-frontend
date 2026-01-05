@@ -73,12 +73,12 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
 
     return (
         <div className="space-y-4">
-            <div className="flex space-x-2 border-b border-gray-200 pb-2">
+            <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0 border-b border-gray-200 pb-2">
                 <Button
                     variant={!showCompletedOrders ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setShowCompletedOrders(false)}
-                    className="rounded-full"
+                    className="rounded-full w-full sm:w-auto"
                 >
                     Active Pay Orders
                 </Button>
@@ -86,15 +86,15 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                     variant={showCompletedOrders ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setShowCompletedOrders(true)}
-                    className="rounded-full"
+                    className="rounded-full w-full sm:w-auto"
                 >
                     <History className="mr-2 h-3 w-3" /> History
                 </Button>
             </div>
 
             <Card className="border border-gray-200 bg-white shadow-none">
-                <div className="overflow-hidden">
-                    <table className="w-full">
+                <div className="overflow-x-auto">
+                    <table className="w-full min-w-[800px]">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">PO #</th>

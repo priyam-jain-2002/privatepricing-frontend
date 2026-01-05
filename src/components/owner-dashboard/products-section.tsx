@@ -102,20 +102,20 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
                     toast.success("Operation cost updated");
                 }}
             />
-            <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={() => document.getElementById('operation-cost-trigger')?.click()}>
+            <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Button variant="outline" onClick={() => document.getElementById('operation-cost-trigger')?.click()} className="w-full sm:w-auto">
                         <Settings className="mr-2 h-4 w-4" />
                         Operation Cost ({activeStore?.operationCostPercentage || 10}%)
                     </Button>
                 </div>
-                <Button onClick={() => setIsAddProductOpen(true)}>
+                <Button onClick={() => setIsAddProductOpen(true)} className="w-full sm:w-auto">
                     <Plus className="mr-2 h-4 w-4" /> Add Product
                 </Button>
             </div>
 
             <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
-                <DialogContent>
+                <DialogContent className="max-w-lg w-full max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Add New Product</DialogTitle>
                     </DialogHeader>
@@ -124,7 +124,7 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
                             <label className="text-sm font-medium">Product Name</label>
                             <Input name="name" required />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">SKU</label>
                                 <Input name="sku" required />
@@ -134,7 +134,7 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
                                 <Input name="hsnCode" placeholder="Optional" />
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Base Price</label>
                                 <Input name="basePrice" type="number" step="0.01" min="0" required />
@@ -144,7 +144,7 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
                                 <Input name="baseFreight" type="number" step="0.01" min="0" placeholder="%" />
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">CGST (%)</label>
                                 <Input name="cgst" type="number" step="0.01" min="0" defaultValue="0" />
@@ -163,7 +163,7 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
             </Dialog>
 
             <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
-                <DialogContent>
+                <DialogContent className="max-w-lg w-full">
                     <DialogHeader>
                         <DialogTitle>Edit Product Details</DialogTitle>
                     </DialogHeader>
@@ -185,8 +185,8 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
             </Dialog>
 
             <Card className="border border-gray-200 bg-white shadow-none">
-                <div className="overflow-hidden">
-                    <table className="w-full">
+                <div className="overflow-x-auto">
+                    <table className="w-full min-w-[1000px]">
                         <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Product Name</th>

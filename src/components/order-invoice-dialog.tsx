@@ -28,14 +28,14 @@ export function PayOrderDialog({ order, open, onOpenChange }: PayOrderDialogProp
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 gap-0">
                 <DialogHeader className="flex flex-col border-b px-6 py-4 bg-gray-50/50">
-                    <div className="flex flex-row items-center justify-between">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
                         <div className="flex flex-col gap-1">
                             <DialogTitle className="text-2xl font-bold text-gray-900">Purchase Order #{order.orderNumber}</DialogTitle>
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm text-gray-500">
                                 <span>{format(new Date(order.createdAt), "MMMM dd, yyyy")}</span>
                                 {order.customerPoNumber && (
                                     <>
-                                        <span className="text-gray-300">•</span>
+                                        <span className="hidden sm:inline text-gray-300">•</span>
                                         <span className="font-medium text-gray-700">PO: {order.customerPoNumber}</span>
                                     </>
                                 )}
@@ -47,12 +47,12 @@ export function PayOrderDialog({ order, open, onOpenChange }: PayOrderDialogProp
                                 {order.status}
                             </span>
                         </div>
-                        <Button variant="outline" size="icon" onClick={() => window.print()}>
+                        <Button variant="outline" size="icon" onClick={() => window.print()} className="self-end sm:self-auto">
                             <Printer className="h-4 w-4" />
                         </Button>
                     </div>
 
-                    <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-2 gap-4">
+                    <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Customer</p>
                             <p className="font-medium text-gray-900">{order.customerNameSnapshot || order.customer?.name}</p>
@@ -64,9 +64,9 @@ export function PayOrderDialog({ order, open, onOpenChange }: PayOrderDialogProp
                     </div>
                 </DialogHeader>
 
-                <div className="flex-1 overflow-y-auto px-6 py-6">
+                <div className="flex-1 overflow-y-auto px-6 py-6 scrollbar-hide">
                     {/* Bill To / Ship To Grid */}
-                    <div className="grid grid-cols-2 gap-12 mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 mb-8">
                         <div>
                             <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Bill To</h4>
                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
@@ -82,8 +82,8 @@ export function PayOrderDialog({ order, open, onOpenChange }: PayOrderDialogProp
                     </div>
 
                     {/* Line Items */}
-                    <div className="border rounded-lg overflow-hidden mb-8">
-                        <table className="w-full text-sm">
+                    <div className="border rounded-lg overflow-hidden mb-8 overflow-x-auto">
+                        <table className="w-full text-sm min-w-[700px]">
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
                                     <th className="px-4 py-3 text-left font-medium text-gray-700 w-[40%]">Item</th>
@@ -131,7 +131,7 @@ export function PayOrderDialog({ order, open, onOpenChange }: PayOrderDialogProp
 
                     {/* Summary Footer */}
                     <div className="flex justify-end mb-8">
-                        <div className="w-1/2 max-w-sm space-y-3">
+                        <div className="w-full sm:w-1/2 max-w-sm space-y-3">
                             <div className="flex justify-between text-sm text-gray-600">
                                 <span>Subtotal (Base)</span>
                                 <span>{order.currency} {baseAmount.toFixed(2)}</span>

@@ -1,12 +1,13 @@
 "use client"
 
-import { ReactNode } from "react"
+import { ReactNode, useState } from "react"
 import { StorefrontProvider, useStorefront } from "@/components/storefront/storefront-context"
 import { Button } from "@/components/ui/button"
-import { LogOut, ShoppingCart, Menu, Search } from "lucide-react"
+import { LogOut, ShoppingCart, Menu, Package, FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
 // Inner component to use the hook
 function StorefrontLayoutContent({ children }: { children: ReactNode }) {
@@ -21,6 +22,7 @@ function StorefrontLayoutContent({ children }: { children: ReactNode }) {
 
     const pathname = usePathname()
     const router = useRouter()
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
     // Exclude public paths from auth guard
     if (pathname.includes('/login') || pathname.includes('/auth') || pathname.includes('/password-reset')) {
@@ -108,10 +110,69 @@ function StorefrontLayoutContent({ children }: { children: ReactNode }) {
                         </div>
 
                         {/* Mobile Menu Button  */}
-                        <div className="md:hidden flex items-center">
-                            <Button variant="ghost" size="icon">
-                                <Menu className="h-6 w-6 text-slate-700" />
-                            </Button>
+                        <div className="md:hidden flex items-center gap-4">
+                            <Link href="/storefront/checkout">
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="relative text-slate-700"
+                                >
+                                    <ShoppingCart className="h-6 w-6" />
+                                    {totalItems > 0 && (
+                                        <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm ring-2 ring-white">
+                                            {totalItems}
+                                        </span>
+                                    )}
+                                </Button>
+                            </Link>
+
+                            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                                <SheetTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                        <Menu className="h-6 w-6 text-slate-700" />
+                                    </Button>
+                                </SheetTrigger>
+                                <SheetContent side="right" className="w-[300px] sm:w-[350px]">
+                                    <div className="flex flex-col h-full mt-6">
+                                        {/* User Info Mobile */}
+                                        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                                            <div className="font-medium text-slate-900">{user.name || user.email}</div>
+                                            {authContext?.customer?.name && (
+                                                <div className="text-sm text-slate-500">{authContext.customer.name}</div>
+                                            )}
+                                        </div>
+
+                                        <nav className="flex flex-col space-y-2">
+                                            <Link href="/storefront/products" onClick={() => setMobileMenuOpen(false)}>
+                                                <Button variant={pathname.includes('/products') ? 'secondary' : 'ghost'} className="w-full justify-start">
+                                                    <Package className="mr-2 h-4 w-4" />
+                                                    Catalog
+                                                </Button>
+                                            </Link>
+                                            <Link href="/storefront/orders" onClick={() => setMobileMenuOpen(false)}>
+                                                <Button variant={pathname.includes('/orders') ? 'secondary' : 'ghost'} className="w-full justify-start">
+                                                    <FileText className="mr-2 h-4 w-4" />
+                                                    Purchase Orders
+                                                </Button>
+                                            </Link>
+                                            <Link href="/storefront/checkout" onClick={() => setMobileMenuOpen(false)}>
+                                                <Button variant={pathname.includes('/checkout') ? 'secondary' : 'ghost'} className="w-full justify-start">
+                                                    <ShoppingCart className="mr-2 h-4 w-4" />
+                                                    Create Pay Order
+                                                    {totalItems > 0 && <span className="ml-auto bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full">{totalItems}</span>}
+                                                </Button>
+                                            </Link>
+                                        </nav>
+
+                                        <div className="mt-auto pt-4 border-t border-gray-100">
+                                            <Button variant="ghost" onClick={handleLogout} className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50">
+                                                <LogOut className="mr-2 h-4 w-4" />
+                                                Log Out
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </SheetContent>
+                            </Sheet>
                         </div>
                     </div>
                 </div>
