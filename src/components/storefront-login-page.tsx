@@ -141,7 +141,9 @@ export function StorefrontLoginPage({ storeName = "Customer Portal", storeId }: 
 
         if (data.redirect) {
             router.push(data.redirect)
-        } else if (roleNum === 0) {
+        } else if (roleNum === 0 || roleNum === 4 || roleNum === 5) {
+            // Redirect Team Members (Owner, Store Manager, Order Manager) to Dashboard
+            // assuming 4 and 5 are the manager roles based on enum
             router.push('/dashboard')
         } else {
             router.push('/storefront')

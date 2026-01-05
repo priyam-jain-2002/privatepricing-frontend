@@ -6,7 +6,7 @@ import Link from "next/link"
 import { StoreProvider, useStore } from "@/contexts/store-context"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 
 const menuItems = [
@@ -20,12 +20,24 @@ const menuItems = [
 function DashboardSidebar({ className, onFormatChange }: { className?: string, onFormatChange?: () => void }) {
     const pathname = usePathname()
     const { activeStore, loading } = useStore()
+    const [role, setRole] = useState<string | null>(null)
+
+    useEffect(() => {
+        setRole(localStorage.getItem('user_role'))
+    }, [])
 
     if (loading) {
         return <div className="p-6 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
     }
 
     const isActive = (href: string) => pathname.startsWith(href)
+
+    const filteredItems = menuItems.filter(item => {
+        if (item.label === "Team") {
+            return role === '0'; // Only visible to Store Owner
+        }
+        return true;
+    });
 
     return (
         <div className={cn("flex flex-col h-full bg-gray-50", className)}>
@@ -36,7 +48,7 @@ function DashboardSidebar({ className, onFormatChange }: { className?: string, o
                 </div>
 
                 <nav className="space-y-2">
-                    {menuItems.map((item) => {
+                    {filteredItems.map((item) => {
                         const Icon = item.icon
                         const active = isActive(item.href)
                         return (
