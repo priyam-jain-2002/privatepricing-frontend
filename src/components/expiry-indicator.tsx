@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/tooltip"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { analytics } from "@/lib/analytics"
 
 export type ExpiryStatus = "EXPIRING_CRITICAL" | "EXPIRING_SOON" | null
 
@@ -47,20 +46,12 @@ export function ExpiryIndicator({
           <div
             className={cn(
               "h-2 w-2 rounded-full shrink-0 cursor-help focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-white",
-              isCritical ? "bg-red-500 focus:ring-red-500" : "focus:ring-yellow-500",
+              isCritical ? "bg-red-500 focus:ring-red-500" : "bg-[#FFD700] focus:ring-yellow-500",
               className
             )}
-            style={!isCritical ? { backgroundColor: '#FFD700' } : undefined}
             tabIndex={0}
             role="img"
             aria-label={tooltipText}
-            onMouseEnter={() => {
-              analytics.capture('expiry_indicator_hovered', {
-                expiryStatus,
-                earliestExpiryDate,
-                type
-              })
-            }}
           />
         </TooltipTrigger>
         <TooltipContent
