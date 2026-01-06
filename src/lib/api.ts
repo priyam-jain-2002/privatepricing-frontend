@@ -319,7 +319,7 @@ export async function fetchAllOrders(storeId: string) {
     return fetchAPI(`/stores/${storeId}/orders`, { headers: getAuthHeaders() });
 }
 
-export async function updateOrderStatus(storeId: string, orderId: string, status: string) {
+export async function updateOrderStatus(storeId: string, orderId: string, status: number) {
     return fetchAPI(`/stores/${storeId}/orders/${orderId}/status`, {
         method: 'PATCH',
         body: JSON.stringify({ status }),

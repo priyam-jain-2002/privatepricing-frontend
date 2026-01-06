@@ -34,7 +34,6 @@ export function ProductRow({ product, onUpdate, onEditDetails, operationCostPerc
                 costPrice: parseFloat(calculatedCostPrice.toFixed(2)),
                 cgst: parseFloat(cgst || '0'),
                 sgst: parseFloat(sgst || '0'),
-                hsnCode: hsnCode
             })
             setIsEditing(false)
             onUpdate()
@@ -57,16 +56,7 @@ export function ProductRow({ product, onUpdate, onEditDetails, operationCostPerc
             <td className="px-6 py-4 text-sm text-gray-600">
                 <div className="flex flex-col">
                     <span>SKU: {product.sku || "-"}</span>
-                    {isEditing ? (
-                        <Input
-                            placeholder="HSN"
-                            value={hsnCode}
-                            onChange={(e) => setHsnCode(e.target.value)}
-                            className="h-7 w-24 text-[10px] mt-1"
-                        />
-                    ) : (
-                        <span className="text-[10px] text-gray-400">HSN: {product.hsnCode || "-"}</span>
-                    )}
+                    <span className="text-[10px] text-gray-400">HSN: {product.hsnCode || "-"}</span>
                 </div>
             </td>
             <td className="px-6 py-4 text-sm text-gray-600">
@@ -75,7 +65,7 @@ export function ProductRow({ product, onUpdate, onEditDetails, operationCostPerc
                         type="number"
                         value={basePrice}
                         onChange={(e) => setBasePrice(e.target.value)}
-                        className="h-8 w-24"
+                        className="h-8 w-24 px-2"
                     />
                 ) : (
                     <span onClick={() => setIsEditing(true)} className="cursor-pointer hover:underline decoration-dashed decoration-gray-400">
@@ -90,7 +80,7 @@ export function ProductRow({ product, onUpdate, onEditDetails, operationCostPerc
                             type="number"
                             value={baseFreight}
                             onChange={(e) => setBaseFreight(e.target.value)}
-                            className="h-8 w-16"
+                            className="h-8 w-16 px-2"
                         />
                         <span className="text-xs">%</span>
                     </div>
@@ -109,7 +99,7 @@ export function ProductRow({ product, onUpdate, onEditDetails, operationCostPerc
                         type="number"
                         value={cgst}
                         onChange={(e) => setCgst(e.target.value)}
-                        className="h-8 w-16"
+                        className="h-8 w-16 px-2"
                     />
                 ) : (
                     <span onClick={() => setIsEditing(true)} className="cursor-pointer hover:underline decoration-dashed decoration-gray-400">
@@ -123,7 +113,7 @@ export function ProductRow({ product, onUpdate, onEditDetails, operationCostPerc
                         type="number"
                         value={sgst}
                         onChange={(e) => setSgst(e.target.value)}
-                        className="h-8 w-16"
+                        className="h-8 w-16 px-2"
                     />
                 ) : (
                     <span onClick={() => setIsEditing(true)} className="cursor-pointer hover:underline decoration-dashed decoration-gray-400">

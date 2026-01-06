@@ -41,10 +41,10 @@ export function PayOrderDialog({ order, open, onOpenChange }: PayOrderDialogProp
                                 )}
                             </div>
                             <span className={`inline-flex items-center w-fit px-2.5 py-0.5 rounded-full text-xs font-medium capitalize mt-1
-                    ${order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                    order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                    ${order.status === 5 ? 'bg-green-100 text-green-800' :
+                                    order.status === 6 ? 'bg-red-100 text-red-800' :
                                         'bg-yellow-100 text-yellow-800'}`}>
-                                {order.status}
+                                {['Requested', 'Pending', 'Processing', 'Shipped', 'PI', 'Completed', 'Cancelled'][order.status] || order.status}
                             </span>
                         </div>
                         <Button variant="outline" size="icon" onClick={() => window.print()} className="self-end sm:self-auto">

@@ -41,6 +41,8 @@ export function CustomerPricingManagement({ storeId, customerId, customer }: Cus
   const [searchQuery, setSearchQuery] = useState("")
   const [addingId, setAddingId] = useState<string | null>(null)
 
+  const [listSearchQuery, setListSearchQuery] = useState("")
+
   useEffect(() => {
     loadCustomerData()
     analytics.capture('customer_pricing_viewed', {
@@ -139,14 +141,30 @@ export function CustomerPricingManagement({ storeId, customerId, customer }: Cus
     p.sku.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  const filteredPricing = customerPricings.filter(p =>
+    p.product?.name.toLowerCase().includes(listSearchQuery.toLowerCase()) ||
+    p.product?.sku.toLowerCase().includes(listSearchQuery.toLowerCase())
+  )
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Assigned Products</h2>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={loadCustomerData} variant="outline" size="sm">Refresh</Button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <Input
+              placeholder="Search assigned products..."
+              className="pl-9 bg-white"
+              value={listSearchQuery}
+              onChange={(e) => setListSearchQuery(e.target.value)}
+            />
+          </div>
+          <Button onClick={loadCustomerData} variant="outline" size="icon">
+            <Loader2 className="h-4 w-4" />
+          </Button>
           <Button onClick={openAddDialog} size="sm">
             <Plus className="h-4 w-4 mr-2" /> Add Product
           </Button>
@@ -168,9 +186,9 @@ export function CustomerPricingManagement({ storeId, customerId, customer }: Cus
               </tr>
             </thead>
             <tbody>
-              {customerPricings.length === 0 ? (
-                <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-500">No products assigned. Click "Add Product" to start.</td></tr>
-              ) : customerPricings.map((pricing) => (
+              {filteredPricing.length === 0 ? (
+                <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-500">No products match your search.</td></tr>
+              ) : filteredPricing.map((pricing) => (
                 <PricingRow
                   key={pricing.id}
                   product={pricing.product} // Backend includes the relation
