@@ -5,6 +5,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { createStorefrontOrder } from "@/lib/api"
+import { analytics } from "@/lib/analytics"
 import { Package, ShoppingCart, Loader2, MapPin } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -102,6 +103,13 @@ export default function StorefrontCheckoutPage() {
 
             toast.success(`Pay Order #${order.orderNumber} created successfully!`, {
                 description: `Order for ${orderItems.length} items submitted.`
+            })
+
+            analytics.capture('order_created', {
+                store_id: storeId,
+                order_id: order.id,
+                actor_role: 'customer',
+                order_source: 'customer'
             })
 
             // Clear Cart

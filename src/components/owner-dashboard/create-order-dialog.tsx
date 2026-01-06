@@ -29,6 +29,7 @@ import {
 } from "@/lib/api"
 import { useStore } from "@/contexts/store-context"
 import { API_URL, getAuthHeaders } from "@/lib/api"
+import { analytics } from "@/lib/analytics"
 
 async function createTeamOrder(storeId: string, customerId: string | null, branchId: string | null, data: any) {
     let url = `${API_URL}/stores/${storeId}`;
@@ -378,9 +379,22 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
 
                 await updateTeamOrder(activeStore.id, initialOrder.id, payload)
                 toast.success("Order updated successfully")
+
+                analytics.capture('order_edited', {
+                    store_id: activeStore.id,
+                    order_id: initialOrder.id,
+                    actor_role: 'store_team'
+                })
             } else {
-                await createTeamOrder(activeStore.id, orderType === 'customer' ? selectedCustomerId : null, finalShippingBranchId, payload)
+                const newOrder = await createTeamOrder(activeStore.id, orderType === 'customer' ? selectedCustomerId : null, finalShippingBranchId, payload)
                 toast.success("Order punched successfully")
+
+                analytics.capture('order_created', {
+                    store_id: activeStore.id,
+                    order_id: newOrder.id,
+                    actor_role: 'store_team',
+                    order_source: 'store_team'
+                })
             }
 
             onOrderCreated()

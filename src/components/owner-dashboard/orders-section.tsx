@@ -129,7 +129,13 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                         />
                     </div>
                     <Button
-                        onClick={() => setShowCreateOrder(true)}
+                        onClick={() => {
+                            setShowCreateOrder(true)
+                            analytics.capture('order_create_started', {
+                                store_id: activeStore.id,
+                                actor_role: 'store_team'
+                            })
+                        }}
                         className="rounded-full w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         <Plus className="mr-2 h-4 w-4" />
@@ -214,6 +220,15 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                                                         }
 
                                                         analytics.capture('order_status_updated', props);
+
+                                                        // New Order Completion Event
+                                                        if (statusInt === 5) {
+                                                            analytics.capture('order_delivered', {
+                                                                store_id: activeStore.id,
+                                                                order_id: order.id,
+                                                                actor_role: 'store_team'
+                                                            })
+                                                        }
 
                                                         await loadOrders();
                                                         toast.success("Order status updated");
