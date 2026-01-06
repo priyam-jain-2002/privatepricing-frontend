@@ -27,26 +27,27 @@ export default function StorefrontProductsPage() {
     return (
         <>
             {/* Hero Section for Catalog */}
-            <div className="bg-white border-b border-gray-100">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <div className="max-w-2xl">
-                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight sm:text-4xl">
-                            Welcome back, <span className="text-blue-600">{customerDetails?.name || user?.name || "Customer"}</span>
+            <div className="bg-background border-b border-border/40">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+                    <div className="max-w-3xl">
+                        <h1 className="text-4xl font-serif font-medium text-foreground tracking-tight sm:text-5xl mb-6">
+                            Welcome back, <br className="hidden sm:block" />
+                            <span className="text-muted-foreground">{customerDetails?.name || user?.name || "Customer"}</span>
                         </h1>
-                        <p className="mt-4 text-lg text-slate-500">
-                            Browse your exclusive catalog and negotiated pricing. All orders are processed within 24 hours.
+                        <p className="text-xl text-muted-foreground font-light leading-relaxed max-w-2xl">
+                            Browse your exclusive catalog and negotiated pricing. <br className="hidden sm:block" />
+                            All orders are processed efficiently within 24 hours.
                         </p>
                     </div>
 
-                    <div className="mt-8 max-w-lg relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-5 w-5 text-gray-400" />
+                    <div className="mt-10 max-w-lg relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <Search className="h-5 w-5 text-muted-foreground/50" />
                         </div>
                         <Input
                             type="text"
-                            placeholder="Search products by name or SKU..."
-                            className="pl-10 h-12 border-gray-200 bg-gray-50 focus:bg-white transition-colors"
-                            // Use local state for filter if we want to impl it
+                            placeholder="Search products by name, SKU, or category..."
+                            className="pl-12 h-14 border-transparent bg-secondary/50 focus:bg-background focus:ring-1 focus:ring-primary/10 transition-all text-base rounded-xl"
                             onChange={(e) => {
                                 // Basic impl: could filter `visibleProducts`
                             }}
@@ -55,87 +56,87 @@ export default function StorefrontProductsPage() {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
                 {loading ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 animate-pulse">
                         {[1, 2, 3, 4].map(i => (
-                            <div key={i} className="h-80 bg-gray-200 rounded-xl"></div>
+                            <div key={i} className="h-[400px] bg-muted rounded-xl"></div>
                         ))}
                     </div>
                 ) : products.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-24 text-center">
-                        <div className="h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-                            <Package className="h-10 w-10 text-gray-300" />
+                    <div className="flex flex-col items-center justify-center py-24 text-center border rounded-xl border-dashed border-border/60 bg-muted/5">
+                        <div className="h-20 w-20 bg-muted/50 rounded-full flex items-center justify-center mb-6">
+                            <Package className="h-8 w-8 text-muted-foreground" />
                         </div>
-                        <h3 className="text-xl font-medium text-gray-900">No products available</h3>
-                        <p className="mt-2 text-gray-500 max-w-sm">
-                            We couldn't find any products assigned to your account. Please contact support.
+                        <h3 className="text-xl font-serif font-medium text-foreground">No products available</h3>
+                        <p className="mt-2 text-muted-foreground max-w-sm">
+                            We couldn't find any products assigned to your account. Please contact your account manager.
                         </p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                         {products.map((product) => (
-                            <Card key={product.id} className="group overflow-hidden border-gray-100 transition-all duration-200 hover:shadow-lg hover:border-blue-100 flex flex-col h-full bg-white">
+                            <Card key={product.id} className="group overflow-hidden border-border bg-card transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 flex flex-col h-full rounded-xl">
                                 {/* Image Placeholder */}
-                                <div className="aspect-[4/3] bg-gray-50 relative overflow-hidden flex items-center justify-center group-hover:bg-blue-50/30 transition-colors">
-                                    <Package className="h-12 w-12 text-gray-300 group-hover:text-blue-200 transition-colors" />
+                                <div className="aspect-[4/3] bg-secondary/30 relative overflow-hidden flex items-center justify-center group-hover:bg-secondary/50 transition-colors">
+                                    <Package className="h-10 w-10 text-muted-foreground/40 group-hover:text-primary/40 transition-colors duration-500" />
                                     {product.minimumQuantity && product.minimumQuantity > 1 && (
-                                        <Badge variant="secondary" className="absolute top-3 left-3 bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200">
+                                        <Badge variant="outline" className="absolute top-4 left-4 bg-background/80 backdrop-blur-sm text-xs font-normal border-border/60">
                                             Min Qty: {product.minimumQuantity}
                                         </Badge>
                                     )}
                                 </div>
 
-                                <CardContent className="p-5 flex-1 flex flex-col">
-                                    <div className="flex-1">
+                                <CardContent className="p-6 flex-1 flex flex-col">
+                                    <div className="flex-1 mb-6">
                                         {product.productSku && (
-                                            <p className="text-xs font-medium text-gray-400 mb-1 tracking-wide uppercase">
-                                                SKU: {product.productSku}
+                                            <p className="text-[10px] font-semibold text-muted-foreground mb-2 tracking-widest uppercase">
+                                                {product.productSku}
                                             </p>
                                         )}
-                                        <h3 className="font-semibold text-gray-900 line-clamp-2 leading-tight group-hover:text-blue-600 transition-colors">
+                                        <h3 className="font-medium text-lg text-foreground line-clamp-2 leading-snug group-hover:text-primary transition-colors mb-2">
                                             {product.name}
                                         </h3>
-                                        <p className="mt-2 text-sm text-gray-500 line-clamp-2">
-                                            {product.description || "No description available."}
+                                        <p className="text-sm text-muted-foreground/80 line-clamp-2 leading-relaxed">
+                                            {product.description || "Premium quality product."}
                                         </p>
                                     </div>
 
-                                    <div className="mt-6">
+                                    <div className="mt-auto pt-6 border-t border-border/40 flex items-baseline justify-between">
                                         <div className="flex items-baseline gap-1">
-                                            <span className="text-2xl font-bold text-slate-900 tracking-tight">
+                                            <span className="text-2xl font-serif text-foreground tracking-tight">
                                                 {formatCurrency(product.price, product.currency)}
                                             </span>
-                                            <span className="text-sm text-gray-400 font-medium">/ {product.unit}</span>
+                                            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">/ {product.unit}</span>
                                         </div>
                                     </div>
                                 </CardContent>
 
-                                <CardFooter className="p-5 pt-0 mt-auto">
+                                <CardFooter className="p-6 pt-0">
                                     {product.quantity === 0 ? (
                                         <Button
-                                            className="w-full bg-slate-900 text-white hover:bg-slate-800 h-10 shadow-sm"
+                                            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-11 font-medium shadow-sm transition-all hover:translate-y-px active:translate-y-0"
                                             onClick={() => updateQuantity(product.id, Math.max(1, product.minimumQuantity || 1))}
                                         >
                                             Add to Order
                                         </Button>
                                     ) : (
-                                        <div className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-1">
+                                        <div className="flex w-full items-center justify-between rounded-md border border-border bg-secondary/20 p-1">
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="h-8 w-8 rounded-md bg-white shadow-sm hover:bg-gray-100 text-slate-700"
+                                                className="h-9 w-9 rounded-sm bg-background shadow-sm hover:bg-muted text-foreground"
                                                 onClick={() => updateQuantity(product.id, product.quantity - 1)}
                                             >
                                                 -
                                             </Button>
-                                            <span className="flex-1 text-center font-semibold text-slate-900 text-sm">
+                                            <span className="flex-1 text-center font-semibold text-foreground text-sm">
                                                 {product.quantity}
                                             </span>
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="h-8 w-8 rounded-md bg-white shadow-sm hover:bg-gray-100 text-slate-700"
+                                                className="h-9 w-9 rounded-sm bg-background shadow-sm hover:bg-muted text-foreground"
                                                 onClick={() => updateQuantity(product.id, product.quantity + 1)}
                                             >
                                                 +
