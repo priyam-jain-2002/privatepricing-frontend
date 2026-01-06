@@ -12,6 +12,8 @@ import { EditCustomerDialog } from "../edit-customer-dialog"
 import { CustomerPricingManagement } from "../customer-pricing-management"
 import { DeleteConfirmationDialog } from "../delete-confirmation-dialog"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
+import { ExpiryIndicator } from "../expiry-indicator"
+import { analytics } from "@/lib/analytics"
 
 interface CustomersSectionProps {
     activeStore: any
@@ -236,7 +238,14 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
 
                                         return (
                                             <tr key={customer.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50">
-                                                <td className="px-6 py-4 text-sm font-medium text-gray-900">{customer.name}</td>
+                                                <td className="px-6 py-4 text-sm font-medium text-gray-900 flex items-center gap-2">
+                                                    <ExpiryIndicator
+                                                        expiryStatus={customer.expiryStatus}
+                                                        earliestExpiryDate={customer.earliestExpiryDate}
+                                                        type="customer"
+                                                    />
+                                                    {customer.name}
+                                                </td>
                                                 <td className="px-6 py-4 text-sm text-gray-600">{customer.GSTIN || "-"}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-600">
                                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize 
@@ -289,7 +298,13 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        onClick={() => navigateToPricing(customer.id)}
+                                                        onClick={() => {
+                                                            analytics.capture('manage_pricing_clicked', {
+                                                                customerId: customer.id,
+                                                                customerName: customer.name
+                                                            })
+                                                            navigateToPricing(customer.id)
+                                                        }}
                                                     >
                                                         Manage Pricing
                                                     </Button>

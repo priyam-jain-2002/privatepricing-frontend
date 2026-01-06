@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import { ExpiryIndicator } from "./expiry-indicator"
 
 interface CustomerPricingManagementProps {
   storeId: string;
@@ -62,8 +63,6 @@ export function CustomerPricingManagement({ storeId, customerId, customer }: Cus
         setCurrentCustomer(fetchedCustomer);
       }
 
-      // Sort: Most recently added first
-      pricingData.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       setCustomerPricings(pricingData)
     } catch (error) {
       logger.error("Failed to load customer pricing", (error as any).stack, { error })
@@ -102,6 +101,14 @@ export function CustomerPricingManagement({ storeId, customerId, customer }: Cus
         effectiveTo: validUntil ? validUntil.toISOString() : undefined
       })
 
+      if (validUntil) {
+        analytics.capture('pricing_validity_updated', {
+          productId: product.id,
+          customerId,
+          newDate: validUntil.toISOString()
+        })
+      }
+
       // Add to list and remove from available
       setCustomerPricings(prev => [newPricing, ...prev])
       setAvailableProducts(prev => prev.filter(p => p.id !== product.id))
@@ -117,6 +124,14 @@ export function CustomerPricingManagement({ storeId, customerId, customer }: Cus
     setSavingId(productId)
     try {
       const updated = await updateCustomerPricing(storeId, customerId, productId, updates)
+
+      if (updates.effectiveTo) {
+        analytics.capture('pricing_validity_updated', {
+          productId,
+          customerId,
+          newDate: updates.effectiveTo
+        })
+      }
 
       setCustomerPricings(prev => prev.map(p =>
         p.productId === productId ? updated : p
@@ -340,8 +355,17 @@ function PricingRow({ product, initialPricing, onSave, savingId, freightRate }: 
   return (
     <tr className={`border-b border-gray-100 last:border-0 hover:bg-gray-50/50 ${!visible ? 'opacity-60 bg-gray-50' : ''}`}>
       <td className="px-6 py-4">
-        <div className="text-sm font-medium text-gray-900">{product.name}</div>
-        <div className="text-xs text-gray-500">{product.sku}</div>
+        <div className="flex items-center gap-2">
+          <ExpiryIndicator
+            expiryStatus={initialPricing.expiryStatus}
+            earliestExpiryDate={initialPricing.expiryDate || initialPricing.effectiveTo}
+            type="product"
+          />
+          <div>
+            <div className="text-sm font-medium text-gray-900">{product.name}</div>
+            <div className="text-xs text-gray-500">{product.sku}</div>
+          </div>
+        </div>
       </td>
       <td className="px-6 py-4 text-sm text-gray-600">
         <div className="flex flex-col">
