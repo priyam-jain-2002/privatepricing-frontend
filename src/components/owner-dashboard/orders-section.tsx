@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { History } from "lucide-react"
+import { History, Plus } from "lucide-react"
 import { fetchAllOrders, updateOrderStatus } from "@/lib/api"
 import { PayOrderDialog } from "../order-invoice-dialog"
 import { analytics } from "@/lib/analytics"
@@ -17,6 +17,8 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+
+import { CreateOrderDialog } from "./create-order-dialog"
 
 interface OrdersSectionProps {
     activeStore: any
@@ -37,6 +39,7 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
 
     const [orders, setOrders] = useState<any[]>([])
     const [showCompletedOrders, setShowCompletedOrders] = useState(false)
+    const [showCreateOrder, setShowCreateOrder] = useState(false)
 
     // URL State
     const activeOrderId = searchParams.get('orderId')
@@ -89,6 +92,15 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                     className="rounded-full w-full sm:w-auto"
                 >
                     <History className="mr-2 h-3 w-3" /> History
+                </Button>
+                <div className="flex-1" />
+                <Button
+                    size="sm"
+                    onClick={() => setShowCreateOrder(true)}
+                    className="rounded-full w-full sm:w-auto bg-black hover:bg-gray-800 text-white shadow-sm"
+                >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Order
                 </Button>
             </div>
 
@@ -175,6 +187,12 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                 order={viewingPayOrder}
                 open={!!viewingPayOrder}
                 onOpenChange={(open: boolean) => !open && setViewingPayOrder(null)}
+            />
+
+            <CreateOrderDialog
+                open={showCreateOrder}
+                onOpenChange={setShowCreateOrder}
+                onOrderCreated={loadOrders}
             />
         </div>
     )
