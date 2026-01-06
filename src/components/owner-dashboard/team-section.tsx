@@ -118,7 +118,7 @@ export function TeamSection({ activeStore }: TeamSectionProps) {
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Role</label>
                         <Select name="role" defaultValue="4" required>
-                            <SelectTrigger className="h-10 w-full">
+                            <SelectTrigger className="h-10 w-full translate-y-1">
                                 <SelectValue placeholder="Select a role" />
                             </SelectTrigger>
                             <SelectContent>
