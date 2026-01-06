@@ -7,8 +7,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useState, useEffect } from "react"
-import { AlertCircle, MapPin, Plus, Trash2, AlertTriangle } from "lucide-react"
-import { updateCustomer, fetchBranches, createBranch, createCustomer } from "@/lib/api"
+import { AlertCircle, MapPin, Plus, Trash2, AlertTriangle, Pencil } from "lucide-react"
+import { updateCustomer, fetchBranches, createBranch, createCustomer, updateBranch, deleteBranch } from "@/lib/api"
 import { toast } from "sonner"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
@@ -31,6 +31,7 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: E
     const [newBranchName, setNewBranchName] = useState('')
     const [newBranchAddress, setNewBranchAddress] = useState('')
     const [isAddingBranch, setIsAddingBranch] = useState(false)
+    const [editingBranchId, setEditingBranchId] = useState<string | null>(null)
 
     useEffect(() => {
         if (open) {
@@ -66,20 +67,44 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: E
         }
     }
 
-    const handleAddBranch = async () => {
+    const handleSaveBranch = async () => {
         if (!newBranchName || !newBranchAddress) {
             toast.error("Please provide both name and address");
             return;
         }
         try {
-            await createBranch(activeCustomer.id, { customerId: activeCustomer.id, name: newBranchName, address: newBranchAddress });
-            toast.success("Branch added successfully");
+            if (editingBranchId) {
+                await updateBranch(activeCustomer.id, editingBranchId, { name: newBranchName, address: newBranchAddress });
+                toast.success("Branch updated successfully");
+            } else {
+                await createBranch(activeCustomer.id, { customerId: activeCustomer.id, name: newBranchName, address: newBranchAddress });
+                toast.success("Branch added successfully");
+            }
             setNewBranchName('');
             setNewBranchAddress('');
             setIsAddingBranch(false);
+            setEditingBranchId(null);
             loadBranches();
         } catch (err: any) {
-            toast.error("Failed to add branch: " + err.message);
+            toast.error(`Failed to ${editingBranchId ? 'update' : 'add'} branch: ` + err.message);
+        }
+    }
+
+    const startEditBranch = (branch: any) => {
+        setNewBranchName(branch.name);
+        setNewBranchAddress(branch.address || '');
+        setEditingBranchId(branch.id);
+        setIsAddingBranch(true);
+    }
+
+    const handleDeleteBranch = async (branchId: string) => {
+        if (!confirm("Are you sure you want to delete this branch?")) return;
+        try {
+            await deleteBranch(activeCustomer.id, branchId);
+            toast.success("Branch deleted successfully");
+            loadBranches();
+        } catch (err: any) {
+            toast.error("Failed to delete branch: " + err.message);
         }
     }
 
@@ -265,8 +290,15 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: E
                         )}
                         <div className="flex items-center justify-between">
                             <h4 className="text-sm font-medium text-gray-900">Branches</h4>
-                            <Button type="button" size="sm" variant="outline" onClick={() => setIsAddingBranch(!isAddingBranch)}>
-                                <Plus className="h-3.5 w-3.5 mr-1" /> Add Branch
+                            <Button type="button" size="sm" variant="outline" onClick={() => {
+                                setIsAddingBranch(!isAddingBranch);
+                                if (!isAddingBranch) {
+                                    setNewBranchName('');
+                                    setNewBranchAddress('');
+                                    setEditingBranchId(null);
+                                }
+                            }}>
+                                <Plus className="h-3.5 w-3.5 mr-1" /> {isAddingBranch && !editingBranchId ? 'Cancel' : 'Add Branch'}
                             </Button>
                         </div>
 
@@ -291,8 +323,11 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: E
                                     />
                                 </div>
                                 <div className="flex justify-end gap-2">
-                                    <Button type="button" variant="ghost" size="sm" onClick={() => setIsAddingBranch(false)} className="h-7 text-xs">Cancel</Button>
-                                    <Button type="button" size="sm" onClick={handleAddBranch} className="h-7 text-xs">Save Branch</Button>
+                                    <Button type="button" variant="ghost" size="sm" onClick={() => {
+                                        setIsAddingBranch(false);
+                                        setEditingBranchId(null);
+                                    }} className="h-7 text-xs">Cancel</Button>
+                                    <Button type="button" size="sm" onClick={handleSaveBranch} className="h-7 text-xs">{editingBranchId ? 'Update Branch' : 'Save Branch'}</Button>
                                 </div>
                             </div>
                         )}
@@ -306,6 +341,14 @@ export function EditCustomerDialog({ customer, open, onOpenChange, onUpdate }: E
                                     <div>
                                         <p className="text-sm font-medium text-gray-900">{branch.name}</p>
                                         <p className="text-xs text-gray-500 whitespace-pre-wrap">{branch.address}</p>
+                                    </div>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button type="button" size="icon" variant="ghost" className="h-6 w-6" onClick={() => startEditBranch(branch)}>
+                                            <Pencil className="h-3 w-3 text-gray-500" />
+                                        </Button>
+                                        <Button type="button" size="icon" variant="ghost" className="h-6 w-6 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteBranch(branch.id)}>
+                                            <Trash2 className="h-3 w-3" />
+                                        </Button>
                                     </div>
                                 </div>
                             ))}

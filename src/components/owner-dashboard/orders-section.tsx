@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { History, Plus, Search, Filter } from "lucide-react"
+import { History, Plus, Search, Filter, Pencil } from "lucide-react"
 import { fetchAllOrders, updateOrderStatus } from "@/lib/api"
 import { PayOrderDialog } from "../order-invoice-dialog"
 import { analytics } from "@/lib/analytics"
@@ -54,6 +54,7 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
 
     const [orders, setOrders] = useState<any[]>([])
     const [showCreateOrder, setShowCreateOrder] = useState(false)
+    const [editingOrder, setEditingOrder] = useState<any>(null)
     const [searchQuery, setSearchQuery] = useState("")
     const [activeFilter, setActiveFilter] = useState("active") // Default to Active
 
@@ -128,7 +129,13 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                         />
                     </div>
                     <Button
-                        onClick={() => setShowCreateOrder(true)}
+                        onClick={() => {
+                            setShowCreateOrder(true)
+                            analytics.capture('order_create_started', {
+                                store_id: activeStore.id,
+                                actor_role: 'store_team'
+                            })
+                        }}
                         className="rounded-full w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         <Plus className="mr-2 h-4 w-4" />
@@ -191,50 +198,74 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                                     <td className="px-6 py-4 text-sm text-gray-600">{order.placedByUser?.name || order.placedByCustomerUser?.name}</td>
                                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{order.currency} {order.finalAmount || order.totalAmount}</td>
                                     <td className="px-6 py-4 text-sm" onClick={(e) => e.stopPropagation()}>
-                                        <Select
-                                            value={order.status}
-                                            onValueChange={async (value) => {
-                                                try {
-                                                    const statusInt = parseInt(value)
-                                                    await updateOrderStatus(activeStore.id, order.id, statusInt);
+                                        <div className="flex items-center gap-2">
+                                            <Select
+                                                value={order.status}
+                                                onValueChange={async (value) => {
+                                                    try {
+                                                        const statusInt = parseInt(value)
+                                                        await updateOrderStatus(activeStore.id, order.id, statusInt);
 
-                                                    const props: any = {
-                                                        orderId: order.id,
-                                                        oldStatus: order.status,
-                                                        newStatus: statusInt
+                                                        const props: any = {
+                                                            orderId: order.id,
+                                                            oldStatus: order.status,
+                                                            newStatus: statusInt
+                                                        }
+
+                                                        if (statusInt === 5 || statusInt === 6) {
+                                                            const created = new Date(order.createdAt).getTime()
+                                                            const now = new Date().getTime()
+                                                            const durationSeconds = Math.floor((now - created) / 1000)
+                                                            props.duration_seconds = durationSeconds
+                                                        }
+
+                                                        analytics.capture('order_status_updated', props);
+
+                                                        // New Order Completion Event
+                                                        if (statusInt === 5) {
+                                                            analytics.capture('order_delivered', {
+                                                                store_id: activeStore.id,
+                                                                order_id: order.id,
+                                                                actor_role: 'store_team'
+                                                            })
+                                                        }
+
+                                                        await loadOrders();
+                                                        toast.success("Order status updated");
+                                                    } catch (err: any) {
+                                                        toast.error("Failed to update status: " + err.message);
                                                     }
+                                                }}
+                                            >
+                                                <SelectTrigger className="w-[140px] h-8 text-xs font-medium rounded-full border-gray-200">
+                                                    <SelectValue>
+                                                        <Badge variant={statusConfig[order.status]?.variant || "secondary"} className="h-5">
+                                                            {statusConfig[order.status]?.label || order.status}
+                                                        </Badge>
+                                                    </SelectValue>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {Object.entries(statusConfig).map(([value, { label }]) => (
+                                                        <SelectItem key={value} value={value} className="text-xs">
+                                                            {label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
 
-                                                    if (statusInt === 5 || statusInt === 6) {
-                                                        const created = new Date(order.createdAt).getTime()
-                                                        const now = new Date().getTime()
-                                                        const durationSeconds = Math.floor((now - created) / 1000)
-                                                        props.duration_seconds = durationSeconds
-                                                    }
-
-                                                    analytics.capture('order_status_updated', props);
-
-                                                    await loadOrders();
-                                                    toast.success("Order status updated");
-                                                } catch (err: any) {
-                                                    toast.error("Failed to update status: " + err.message);
-                                                }
-                                            }}
-                                        >
-                                            <SelectTrigger className="w-[140px] h-8 text-xs font-medium rounded-full border-gray-200">
-                                                <SelectValue>
-                                                    <Badge variant={statusConfig[order.status]?.variant || "secondary"} className="h-5">
-                                                        {statusConfig[order.status]?.label || order.status}
-                                                    </Badge>
-                                                </SelectValue>
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {Object.entries(statusConfig).map(([value, { label }]) => (
-                                                    <SelectItem key={value} value={value} className="text-xs">
-                                                        {label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-gray-400 hover:text-black"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setEditingOrder(order);
+                                                    setShowCreateOrder(true);
+                                                }}
+                                            >
+                                                <Pencil className="h-3.5 w-3.5" />
+                                            </Button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -251,8 +282,12 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
 
             <CreateOrderDialog
                 open={showCreateOrder}
-                onOpenChange={setShowCreateOrder}
+                onOpenChange={(open) => {
+                    setShowCreateOrder(open)
+                    if (!open) setEditingOrder(null)
+                }}
                 onOrderCreated={loadOrders}
+                initialOrder={editingOrder}
             />
         </div>
     )

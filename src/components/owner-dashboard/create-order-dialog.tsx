@@ -25,9 +25,11 @@ import {
     fetchBranches,
     getCustomerPricings,
     fetchProducts,
+    updateTeamOrder,
 } from "@/lib/api"
 import { useStore } from "@/contexts/store-context"
 import { API_URL, getAuthHeaders } from "@/lib/api"
+import { analytics } from "@/lib/analytics"
 
 async function createTeamOrder(storeId: string, customerId: string | null, branchId: string | null, data: any) {
     let url = `${API_URL}/stores/${storeId}`;
@@ -64,9 +66,10 @@ interface CreateOrderDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     onOrderCreated: () => void
+    initialOrder?: any
 }
 
-export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: CreateOrderDialogProps) {
+export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialOrder }: CreateOrderDialogProps) {
     const { activeStore } = useStore()
 
     const [customers, setCustomers] = useState<any[]>([])
@@ -97,16 +100,45 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
     const [mobileTab, setMobileTab] = useState<'catalog' | 'cart'>('catalog')
 
     // Clear cart on mode switch
-    useEffect(() => {
-        setCart([])
-        setSearchQuery("")
-    }, [orderType])
+    // MOVED to manual handlers to prevent clearing on init
+    // useEffect(() => {
+    //     setCart([])
+    //     setSearchQuery("")
+    // }, [orderType])
 
     useEffect(() => {
         if (open && activeStore) {
             loadCustomers()
-            // Always load products for Quick Order mode immediately
             loadAllProducts()
+
+            if (initialOrder) {
+                // Populate form for editing
+                setOrderType(initialOrder.customerId ? 'customer' : 'quick')
+                if (initialOrder.customerId) setSelectedCustomerId(initialOrder.customerId)
+
+                // Set branches
+                if (initialOrder.shippingBranchId) setSelectedBranchId(initialOrder.shippingBranchId)
+                if (initialOrder.billingBranchId) setBillingBranchId(initialOrder.billingBranchId)
+
+                // Quick Order fields
+                if (initialOrder.orderSource) setQuickOrderSource(initialOrder.orderSource)
+                if (initialOrder.contactPerson) setContactPerson(initialOrder.contactPerson)
+                if (initialOrder.contactPhone) setContactPhone(initialOrder.contactPhone)
+                if (initialOrder.shippingAddressSnapshot) setDeliveryAddress(initialOrder.shippingAddressSnapshot)
+
+                if (initialOrder.customerPoNumber) setPoNumber(initialOrder.customerPoNumber)
+
+                // Populate Cart
+                // Map existing items to cart structure
+                if (initialOrder.items && Array.isArray(initialOrder.items)) {
+                    const mappedCart = initialOrder.items.map((item: any) => ({
+                        productId: item.productId,
+                        quantity: item.quantity,
+                        customPrice: item.priceSource === 'override' ? item.unitPriceAtTime : undefined
+                    }))
+                    setCart(mappedCart)
+                }
+            }
         } else {
             // Reset State
             setOrderType('quick')
@@ -165,15 +197,21 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
             ])
             setBranches(Array.isArray(branchesData) ? branchesData : [])
 
-            // Default to first branch if available
-            if (Array.isArray(branchesData) && branchesData.length > 0) {
+            // Default to first branch if available AND no branch currently selected (and not editing an existing selection)
+            // We check if selectedBranchId is 'no-branch' to decide if we should default. 
+            // BUT beware of race conditions with initialOrder setting it.
+            // If initialOrder set it, selectedBranchId is NOT 'no-branch'.
+            if (selectedBranchId === 'no-branch' && Array.isArray(branchesData) && branchesData.length > 0) {
                 setSelectedBranchId(branchesData[0].id)
                 // Also default billing to first if not already set (or reset it)
                 // Logic elsewhere handles separate billing visibility, but good to have a valid ID selected underneath
                 setBillingBranchId(branchesData[0].id)
-            } else {
-                setSelectedBranchId("no-branch")
-                setBillingBranchId("no-branch")
+            } else if (!branchesData.find((b: any) => b.id === selectedBranchId)) {
+                // If selected branch is not in the new list (e.g. customer changed), reset
+                if (selectedBranchId !== 'no-branch') {
+                    setSelectedBranchId("no-branch")
+                    setBillingBranchId("no-branch")
+                }
             }
 
             setCustomerPricings(Array.isArray(pricingsData) ? pricingsData : [])
@@ -258,9 +296,9 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
         let tax = 0
         let itemCount = 0
         cart.forEach(item => {
-            const product = availableProducts.find(p => p?.id === item.productId)
+            const product = availableProducts.find(p => p?.id === item.productId) || products.find(p => p.id === item.productId)
             if (product) {
-                const finalPrice = (item.customPrice !== undefined) ? item.customPrice : product.effectivePrice
+                const finalPrice = (item.customPrice !== undefined) ? item.customPrice : (product.effectivePrice || product.basePrice || 0)
                 const lineTotal = finalPrice * item.quantity
 
                 // Tax Calculation (Exclusive)
@@ -329,12 +367,40 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
                 payload.billingBranchId = finalShippingBranchId;
             }
 
-            await createTeamOrder(activeStore.id, orderType === 'customer' ? selectedCustomerId : null, finalShippingBranchId, payload)
-            toast.success("Order punched successfully")
+            if (initialOrder) {
+                // Warning for Edit
+                if (!window.confirm("WARNING: You are editing an existing order.\n\nThis will completely overwrite items and recalculate totals. The previous audit trail will note these changes.\n\nAre you sure you want to proceed?")) {
+                    setSubmitting(false)
+                    return
+                }
+
+                // Add change reason? For now, we don't have a UI for it, maybe prompt? 
+                // Or just proceed.
+
+                await updateTeamOrder(activeStore.id, initialOrder.id, payload)
+                toast.success("Order updated successfully")
+
+                analytics.capture('order_edited', {
+                    store_id: activeStore.id,
+                    order_id: initialOrder.id,
+                    actor_role: 'store_team'
+                })
+            } else {
+                const newOrder = await createTeamOrder(activeStore.id, orderType === 'customer' ? selectedCustomerId : null, finalShippingBranchId, payload)
+                toast.success("Order punched successfully")
+
+                analytics.capture('order_created', {
+                    store_id: activeStore.id,
+                    order_id: newOrder.id,
+                    actor_role: 'store_team',
+                    order_source: 'store_team'
+                })
+            }
+
             onOrderCreated()
             onOpenChange(false)
         } catch (err: any) {
-            toast.error("Failed to create order: " + err.message)
+            toast.error(`Failed to ${initialOrder ? 'update' : 'create'} order: ` + err.message)
         } finally {
             setSubmitting(false)
         }
@@ -347,7 +413,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
                 {/* Header */}
                 <div className="bg-white border-b px-6 py-4 flex items-center justify-between shrink-0">
                     <div>
-                        <DialogTitle className="text-xl font-semibold text-gray-900">Add Order</DialogTitle>
+                        <DialogTitle className="text-xl font-semibold text-gray-900">{initialOrder ? 'Edit Order' : 'Add Order'}</DialogTitle>
                         <DialogDescription className="text-gray-500 mt-1">Create a new purchase order.</DialogDescription>
                     </div>
                     {orderType === 'customer' && selectedCustomerId && (
@@ -384,13 +450,25 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
                             {/* Order Type Toggle */}
                             <div className="flex p-1 bg-gray-100 rounded-lg w-full mb-4">
                                 <button
-                                    onClick={() => setOrderType('quick')}
+                                    onClick={() => {
+                                        if (orderType !== 'quick') {
+                                            setOrderType('quick')
+                                            setCart([])
+                                            setSearchQuery("")
+                                        }
+                                    }}
                                     className={`flex-1 text-sm font-medium py-1.5 rounded-md transition-all ${orderType === 'quick' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                                 >
                                     Quick Order
                                 </button>
                                 <button
-                                    onClick={() => setOrderType('customer')}
+                                    onClick={() => {
+                                        if (orderType !== 'customer') {
+                                            setOrderType('customer')
+                                            setCart([])
+                                            setSearchQuery("")
+                                        }
+                                    }}
                                     className={`flex-1 text-sm font-medium py-1.5 rounded-md transition-all ${orderType === 'customer' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                                 >
                                     Customer Order
@@ -428,7 +506,6 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
                                                     <SelectValue placeholder="Head Office / Default" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="no-branch" className="text-gray-500">Head Office / Default</SelectItem>
                                                     {branches.map(b => (
                                                         <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                                                     ))}
@@ -452,7 +529,6 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
                                                                 <SelectValue placeholder="Head Office / Default" />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                <SelectItem value="no-branch" className="text-gray-500">Head Office / Default</SelectItem>
                                                                 {branches.map(b => (
                                                                     <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                                                                 ))}
@@ -591,7 +667,8 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
                             ) : (
                                 <div className="space-y-3">
                                     {cart.map(item => {
-                                        const product = availableProducts.find(p => p?.id === item.productId)
+                                        // Fallback to main products list if not in availableProducts (e.g. filtered out by search or visibility)
+                                        const product = availableProducts.find(p => p?.id === item.productId) || products.find(p => p.id === item.productId)
                                         if (!product) return null
                                         const basePrice = typeof product.effectivePrice === 'number' ? product.effectivePrice : 0
                                         const currentPrice = (item.customPrice !== undefined) ? item.customPrice : basePrice
@@ -665,45 +742,54 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="w-full text-blue-600 border-blue-200 hover:bg-blue-50"
+                                            className="w-full text-black font-bold border-gray-200 hover:bg-gray-50"
                                             onClick={() => setShowContactInfo(true)}
                                         >
                                             <Plus className="w-4 h-4 mr-2" />
                                             Add Delivery & Contact Info
                                         </Button>
                                     ) : (
-                                        <div className="space-y-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100 relative">
-                                            <div className="flex justify-between items-center mb-2">
-                                                <h4 className="text-xs font-semibold text-blue-800 uppercase tracking-wider">Delivery & Contact</h4>
+                                        <div className="space-y-4 rounded-lg border border-dashed border-gray-200 p-4 transition-all">
+                                            <div className="flex justify-between items-center">
+                                                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Delivery Details</h4>
                                                 <Button
                                                     variant="ghost"
-                                                    size="icon"
-                                                    className="h-6 w-6 text-blue-400 hover:text-blue-600 hover:bg-blue-100"
+                                                    size="sm"
+                                                    className="h-6 px-2 text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
                                                     onClick={() => setShowContactInfo(false)}
                                                 >
-                                                    <X className="w-3 h-3" />
+                                                    Remove
                                                 </Button>
                                             </div>
                                             <div className="grid grid-cols-2 gap-3">
+                                                <div className="space-y-1">
+                                                    <Label className="text-[10px] text-gray-400 uppercase">Contact Person</Label>
+                                                    <Input
+                                                        placeholder="Name"
+                                                        className="h-8 bg-white text-xs border-gray-200"
+                                                        value={contactPerson}
+                                                        onChange={e => setContactPerson(e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label className="text-[10px] text-gray-400 uppercase">Phone</Label>
+                                                    <Input
+                                                        placeholder="Number"
+                                                        className="h-8 bg-white text-xs border-gray-200"
+                                                        value={contactPhone}
+                                                        onChange={e => setContactPhone(e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[10px] text-gray-400 uppercase">Address</Label>
                                                 <Input
-                                                    placeholder="Contact Person"
-                                                    className="h-8 bg-white text-xs"
-                                                    value={contactPerson}
-                                                    onChange={e => setContactPerson(e.target.value)}
-                                                />
-                                                <Input
-                                                    placeholder="Phone Number"
-                                                    className="h-8 bg-white text-xs"
-                                                    value={contactPhone}
-                                                    onChange={e => setContactPhone(e.target.value)}
+                                                    placeholder="Full Delivery Address"
+                                                    className="h-8 bg-white text-xs border-gray-200"
+                                                    value={deliveryAddress}
+                                                    onChange={e => setDeliveryAddress(e.target.value)}
                                                 />
                                             </div>
-                                            <Input
-                                                placeholder="Delivery Address"
-                                                className="h-8 bg-white text-xs"
-                                                value={deliveryAddress}
-                                                onChange={e => setDeliveryAddress(e.target.value)}
-                                            />
                                         </div>
                                     )}
                                 </div>
@@ -744,7 +830,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
                                 onClick={handleSubmit}
                             >
                                 {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Add Order
+                                {initialOrder ? 'Update Order' : 'Add Order'}
                             </Button>
                         </div>
                     </div>

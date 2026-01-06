@@ -255,6 +255,21 @@ export async function createBranch(customerId: string, data: any) {
     });
 }
 
+export async function updateBranch(customerId: string, branchId: string, data: any) {
+    return fetchAPI(`/customers/${customerId}/branches/${branchId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+        headers: getAuthHeaders()
+    });
+}
+
+export async function deleteBranch(customerId: string, branchId: string) {
+    return fetchAPI(`/customers/${customerId}/branches/${branchId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+    });
+}
+
 
 export async function createCustomerUser(customerId: string, data: any) {
     return fetchAPI(`/customers/${customerId}/users`, {
@@ -362,6 +377,14 @@ export async function createStorefrontOrder(storeId: string, customerId: string,
 
     return fetchAPI(url, {
         method: 'POST',
+        body: JSON.stringify(data),
+        headers: getAuthHeaders()
+    });
+}
+
+export async function updateTeamOrder(storeId: string, orderId: string, data: any) {
+    return fetchAPI(`/stores/${storeId}/orders/${orderId}`, {
+        method: 'PATCH',
         body: JSON.stringify(data),
         headers: getAuthHeaders()
     });
