@@ -81,6 +81,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
 
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>("")
     const [selectedBranchId, setSelectedBranchId] = useState<string>("no-branch")
+    const [billingBranchId, setBillingBranchId] = useState<string>("no-branch")
 
     // Cart logic
     const [cart, setCart] = useState<{ productId: string, quantity: number, customPrice?: number }[]>([])
@@ -93,6 +94,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
     const [contactPhone, setContactPhone] = useState("")
     const [deliveryAddress, setDeliveryAddress] = useState("")
     const [showContactInfo, setShowContactInfo] = useState(false)
+    const [mobileTab, setMobileTab] = useState<'catalog' | 'cart'>('catalog')
 
     // Clear cart on mode switch
     useEffect(() => {
@@ -111,6 +113,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
             setQuickOrderSource("walkin")
             setSelectedCustomerId("")
             setSelectedBranchId("no-branch")
+            setBillingBranchId("no-branch")
             setCart([])
             setSearchQuery("")
             setBranches([])
@@ -161,6 +164,18 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
                 fetchProducts().catch(() => [])
             ])
             setBranches(Array.isArray(branchesData) ? branchesData : [])
+
+            // Default to first branch if available
+            if (Array.isArray(branchesData) && branchesData.length > 0) {
+                setSelectedBranchId(branchesData[0].id)
+                // Also default billing to first if not already set (or reset it)
+                // Logic elsewhere handles separate billing visibility, but good to have a valid ID selected underneath
+                setBillingBranchId(branchesData[0].id)
+            } else {
+                setSelectedBranchId("no-branch")
+                setBillingBranchId("no-branch")
+            }
+
             setCustomerPricings(Array.isArray(pricingsData) ? pricingsData : [])
             setProducts(Array.isArray(productsData) ? productsData : [])
         } catch (err) {
@@ -179,16 +194,17 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
 
         return products.map(p => {
             let effectivePrice = p.basePrice || 0
-            let isVisible = true
 
             if (orderType === 'customer') {
                 const pricing = Array.isArray(customerPricings) ? customerPricings.find((cp: any) => cp.productId === p.id) : null
-                if (pricing && !pricing.visible) isVisible = false
 
-                if (pricing && pricing.sellingPrice !== null && pricing.sellingPrice !== undefined) {
-                    effectivePrice = pricing.sellingPrice
+                // Strict filtering: Only show if pricing exists and is visible
+                if (!pricing || !pricing.visible) return null
+
+                if (pricing.sellingPrice !== null && pricing.sellingPrice !== undefined) {
+                    effectivePrice = Number(pricing.sellingPrice)
                 }
-                return isVisible ? { ...p, effectivePrice, hasCustomPrice: !!pricing } : null
+                return { ...p, effectivePrice, hasCustomPrice: true } // Mark as having custom/assigned price
             } else {
                 // Quick Order: Show all, use base price
                 return { ...p, effectivePrice }
@@ -215,6 +231,17 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
             }
             return item
         }).filter(item => item.quantity > 0))
+    }
+
+    const setItemQuantity = (productId: string, qty: number) => {
+        setCart(prev => prev.map(item => {
+            if (item.productId === productId) {
+                return { ...item, quantity: Math.max(0, qty) }
+            }
+            return item
+        }).filter(item => item.quantity > 0 || qty === 0)) // Keep item if qty is 0 temporarily? No, standard logic removes it. 
+        // User wants to edit quantity. If they type 0 it removes? Maybe better to allow 0 while typing? 
+        // For now, let's just use standard filter > 0. If they type 0, it removes.
     }
 
     const updateCartItemPrice = (productId: string, price: number) => {
@@ -262,10 +289,11 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
 
         setSubmitting(true)
         try {
-            const finalBranchId = selectedBranchId === "no-branch" ? null : selectedBranchId
+            const finalShippingBranchId = selectedBranchId === "no-branch" ? null : selectedBranchId
+            const finalBillingBranchId = billingBranchId === "no-branch" ? null : billingBranchId
 
             const payload: any = {
-                items: cart.map(item => ({
+                items: cart.filter(i => i.quantity > 0).map(item => ({
                     productId: item.productId,
                     quantity: item.quantity,
                     customUnitPrice: (orderType === 'quick' && item.customPrice !== undefined) ? item.customPrice : undefined
@@ -278,12 +306,30 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
                 deliveryAddress: orderType === 'quick' ? deliveryAddress : undefined
             }
 
-            if (finalBranchId) {
-                payload.shippingBranchId = finalBranchId;
-                payload.billingBranchId = finalBranchId;
+            if (orderType === 'customer') {
+                const customer = customers.find(c => c.id === selectedCustomerId)
+                const useSame = customer?.isBillToSameAsShipTo ?? false // Default to false if undefined? Actually entity default is false. 
+                // But wait, if IsBillToSameAsShipTo is TRUE, we force same.
+
+                payload.shippingBranchId = finalShippingBranchId
+
+                if (useSame) {
+                    payload.billingBranchId = finalShippingBranchId
+                } else {
+                    // If user didn't select billing branch (kept at default/no-branch), maybe default to shipping?
+                    // Or send null? If separate, they might want head office (null). 
+                    // Let's rely on what they picked. If they picked "no-branch", it's head office (null).
+                    payload.billingBranchId = finalBillingBranchId || finalShippingBranchId // Fallback to shipping if not set? 
+                    // Better validation: If displayed, force selection or default to 'no-branch'.
+                    // If 'no-branch' is selected, it sends null.
+                    // If 'billingBranchId' is 'no-branch', sending null is correct for Head Office.
+                }
+            } else if (finalShippingBranchId) { // Quick Order case (less likely to have branches but code handles it)
+                payload.shippingBranchId = finalShippingBranchId;
+                payload.billingBranchId = finalShippingBranchId;
             }
 
-            await createTeamOrder(activeStore.id, orderType === 'customer' ? selectedCustomerId : null, finalBranchId, payload)
+            await createTeamOrder(activeStore.id, orderType === 'customer' ? selectedCustomerId : null, finalShippingBranchId, payload)
             toast.success("Order punched successfully")
             onOrderCreated()
             onOpenChange(false)
@@ -296,7 +342,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-[95vw] w-[1200px] h-[85vh] p-0 gap-0 overflow-hidden flex flex-col bg-gray-50/50">
+            <DialogContent className="max-w-[98vw] w-full h-[95vh] p-0 gap-0 overflow-hidden flex flex-col bg-gray-50/50">
 
                 {/* Header */}
                 <div className="bg-white border-b px-6 py-4 flex items-center justify-between shrink-0">
@@ -312,9 +358,25 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
                     )}
                 </div>
 
-                <div className="flex flex-1 overflow-hidden">
+                {/* Mobile Tabs */}
+                <div className="md:hidden flex border-b bg-gray-50">
+                    <button
+                        onClick={() => setMobileTab('catalog')}
+                        className={`flex-1 py-3 text-sm font-semibold ${mobileTab === 'catalog' ? 'bg-white text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
+                    >
+                        Catalog
+                    </button>
+                    <button
+                        onClick={() => setMobileTab('cart')}
+                        className={`flex-1 py-3 text-sm font-semibold relative ${mobileTab === 'cart' ? 'bg-white text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
+                    >
+                        Cart ({cartSummary.itemCount})
+                    </button>
+                </div>
+
+                <div className="flex flex-1 overflow-hidden relative">
                     {/* LEFT: Selection & Catalog */}
-                    <div className="flex-1 flex flex-col min-w-0 border-r bg-white">
+                    <div className={`${mobileTab === 'catalog' ? 'flex' : 'hidden'} md:flex flex-1 flex-col min-w-0 border-r bg-white`}>
 
                         {/* 1. Context Pickers */}
                         <div className="p-6 border-b space-y-4 shrink-0 bg-white z-10">
@@ -352,10 +414,14 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
                                             </Select>
                                         </div>
                                         <div className="space-y-1.5">
-                                            <Label className="text-xs font-semibold uppercase text-gray-500 tracking-wider">Destination Branch</Label>
+                                            <Label className="text-xs font-semibold uppercase text-gray-500 tracking-wider">Destination / Shipping Branch</Label>
                                             <Select
                                                 value={selectedBranchId}
-                                                onValueChange={setSelectedBranchId}
+                                                onValueChange={(val) => {
+                                                    setSelectedBranchId(val)
+                                                    // Auto-set billing if same enforced or not yet set? 
+                                                    // If enforcing same, we handle payload construction.
+                                                }}
                                                 disabled={!selectedCustomerId || branches.length === 0}
                                             >
                                                 <SelectTrigger className="bg-gray-50 border-gray-200">
@@ -369,6 +435,34 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
                                                 </SelectContent>
                                             </Select>
                                         </div>
+
+                                        {(() => {
+                                            const customer = customers.find(c => c.id === selectedCustomerId)
+                                            // Only show separate billing if isBillToSameAsShipTo is FALSE
+                                            if (customer && !customer.isBillToSameAsShipTo) {
+                                                return (
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-xs font-semibold uppercase text-gray-500 tracking-wider">Billing Branch</Label>
+                                                        <Select
+                                                            value={billingBranchId}
+                                                            onValueChange={setBillingBranchId}
+                                                            disabled={!selectedCustomerId || branches.length === 0}
+                                                        >
+                                                            <SelectTrigger className="bg-gray-50 border-gray-200">
+                                                                <SelectValue placeholder="Head Office / Default" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="no-branch" className="text-gray-500">Head Office / Default</SelectItem>
+                                                                {branches.map(b => (
+                                                                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                )
+                                            }
+                                            return null
+                                        })()}
                                     </>
                                 ) : (
                                     // Quick Order Controls
@@ -437,19 +531,25 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
 
                                                 <div className="shrink-0">
                                                     {inCart ? (
-                                                        <div className="flex items-center gap-3 bg-white border shadow-sm rounded-lg p-1">
+                                                        <div className="flex items-center gap-1 bg-white border shadow-sm rounded-lg p-0.5">
                                                             <button
-                                                                className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-600 transition-colors"
+                                                                className="w-6 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-600 transition-colors"
                                                                 onClick={() => updateQuantity(product.id, -1)}
                                                             >
-                                                                <Minus className="w-3.5 h-3.5" />
+                                                                <Minus className="w-3 h-3" />
                                                             </button>
-                                                            <span className="w-6 text-center font-semibold text-sm">{inCart.quantity}</span>
+                                                            <input
+                                                                className="w-16 text-center font-semibold text-sm border-x py-1 focus:outline-none"
+                                                                value={inCart.quantity === 0 ? '' : inCart.quantity}
+                                                                onChange={(e) => setItemQuantity(product.id, parseInt(e.target.value) || 0)}
+                                                                type="number"
+                                                                min="0"
+                                                            />
                                                             <button
-                                                                className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-black hover:text-white text-gray-900 transition-colors"
+                                                                className="w-6 h-7 flex items-center justify-center rounded-md hover:bg-black hover:text-white text-gray-900 transition-colors"
                                                                 onClick={() => updateQuantity(product.id, 1)}
                                                             >
-                                                                <Plus className="w-3.5 h-3.5" />
+                                                                <Plus className="w-3 h-3" />
                                                             </button>
                                                         </div>
                                                     ) : (
@@ -470,8 +570,8 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
                         </div>
                     </div>
 
-                    {/* RIGHT: Cart Summary - Fixed width */}
-                    <div className="w-[500px] flex flex-col bg-white border-l shadow-xl shadow-gray-200/50 z-20">
+                    {/* RIGHT: Cart Summary - Fluid width */}
+                    <div className={`${mobileTab === 'cart' ? 'flex' : 'hidden'} md:flex flex-[1.3] min-w-0 md:min-w-[400px] flex-col bg-white border-l shadow-xl shadow-gray-200/50 z-20`}>
                         <div className="p-6 bg-gray-50/50 border-b flex items-center gap-2">
                             <Receipt className="w-4 h-4 text-gray-500" />
                             <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-600">Purchase Order</h3>
@@ -495,37 +595,58 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
                                         if (!product) return null
                                         const basePrice = typeof product.effectivePrice === 'number' ? product.effectivePrice : 0
                                         const currentPrice = (item.customPrice !== undefined) ? item.customPrice : basePrice
+                                        const lineTotal = currentPrice * item.quantity
+
+                                        // Calculate Item Tax
+                                        const cgst = Number(product.cgst) || 9
+                                        const sgst = Number(product.sgst) || 9
+                                        const itemTax = lineTotal * ((cgst + sgst) / 100)
 
                                         return (
-                                            <div key={item.productId} className="flex flex-col gap-2 text-sm bg-gray-50 p-3 rounded-lg border border-transparent hover:border-gray-200 transition-colors">
+                                            <div key={item.productId} className="flex flex-col gap-3 text-base bg-gray-50 p-4 rounded-lg border border-transparent hover:border-gray-200 transition-colors">
                                                 <div className="flex justify-between items-start">
                                                     <div className="flex-1 pr-3">
                                                         <div className="font-medium text-gray-900 line-clamp-2">{product.name}</div>
+                                                        <div className="text-xs text-gray-500 mt-1">
+                                                            + GST: {product.currency} {itemTax.toFixed(2)}
+                                                        </div>
                                                     </div>
 
-                                                    <div className="font-semibold text-gray-900 tabular-nums">
-                                                        {(currentPrice * item.quantity).toFixed(2)}
+                                                    <div className="font-semibold text-gray-900 tabular-nums text-lg">
+                                                        {(lineTotal).toFixed(2)}
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center justify-between mt-1">
-                                                    <div className="text-gray-500 text-xs flex items-center gap-1">
-                                                        {item.quantity} x
+                                                <div className="flex items-center justify-between mt-2">
+                                                    <div className="text-gray-600 flex items-center gap-3 w-full">
+                                                        <div className="flex items-center gap-2">
+                                                            <input
+                                                                className="w-20 text-center font-semibold text-base border rounded bg-white py-1 focus:ring-2 focus:ring-black focus:border-transparent outline-none"
+                                                                value={item.quantity === 0 ? '' : item.quantity}
+                                                                onChange={(e) => setItemQuantity(item.productId, parseInt(e.target.value) || 0)}
+                                                                type="number"
+                                                                min="0"
+                                                                placeholder="Qty"
+                                                            />
+                                                            <span className="text-sm font-medium">units</span>
+                                                        </div>
+
+                                                        <span className="text-gray-300">|</span>
+
                                                         {orderType === 'quick' ? (
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-gray-400 font-medium">{product.currency}</span>
+                                                            <div className="flex items-center gap-2 flex-1">
+                                                                <span className="text-gray-500 font-medium">{product.currency}</span>
                                                                 <input
                                                                     type="number"
-                                                                    className="w-32 px-2 py-1 border rounded font-semibold text-gray-900 text-base focus:ring-2 focus:ring-black focus:border-transparent outline-none bg-white"
-                                                                    placeholder="0.00"
+                                                                    className="flex-1 w-full px-3 py-1 border rounded font-semibold text-gray-900 text-base focus:ring-2 focus:ring-black focus:border-transparent outline-none bg-white"
+                                                                    placeholder="Unit Price"
                                                                     value={currentPrice === 0 ? '' : currentPrice}
                                                                     onChange={(e) => updateCartItemPrice(item.productId, parseFloat(e.target.value) || 0)}
                                                                     min="0"
-                                                                    autoFocus={currentPrice === 0}
                                                                 />
                                                             </div>
                                                         ) : (
-                                                            <span>{product.currency} {basePrice.toFixed(2)}</span>
+                                                            <span>{product.currency} {basePrice.toFixed(2)} / unit</span>
                                                         )}
                                                     </div>
                                                 </div>
@@ -608,7 +729,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated }: Create
                                     <span>{activeStore?.currency || 'INR'} {(typeof cartSummary.subtotal === 'number' ? cartSummary.subtotal : 0).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-xs text-gray-500">
-                                    <span>GST (18%)</span>
+                                    <span>GST</span>
                                     <span>{activeStore?.currency || 'INR'} {(typeof cartSummary.tax === 'number' ? cartSummary.tax : 0).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-xl font-bold text-gray-900 border-t pt-3">

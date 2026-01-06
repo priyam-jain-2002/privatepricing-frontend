@@ -907,14 +907,14 @@ export function CustomerStorefront() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-white">
-                    {orders.filter(o => showHistory ? ['completed', 'cancelled'].includes(o.status) : !['completed', 'cancelled'].includes(o.status)).length === 0 ? (
+                    {orders.filter(o => showHistory ? [5, 6].includes(o.status) : ![5, 6].includes(o.status)).length === 0 ? (
                       <tr>
                         <td colSpan={6} className="px-6 py-12 text-center text-sm text-gray-500">
                           {showHistory ? "No past orders found." : "No active orders."}
                         </td>
                       </tr>
                     ) : orders
-                      .filter(o => showHistory ? ['completed', 'cancelled'].includes(o.status) : !['completed', 'cancelled'].includes(o.status))
+                      .filter(o => showHistory ? [5, 6].includes(o.status) : ![5, 6].includes(o.status))
                       .map((order) => (
                         <tr key={order.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -925,11 +925,11 @@ export function CustomerStorefront() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
-                              ${order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                  order.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                              ${order.status === 5 ? 'bg-green-100 text-green-800' :
+                                order.status === 6 ? 'bg-red-100 text-red-800' :
+                                  order.status === 2 ? 'bg-blue-100 text-blue-800' :
                                     'bg-yellow-100 text-yellow-800'}`}>
-                              {order.status}
+                              {['Requested', 'Pending', 'Processing', 'Shipped', 'PI', 'Completed', 'Cancelled'][order.status] || order.status}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

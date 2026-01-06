@@ -118,7 +118,7 @@ export function TeamSection({ activeStore }: TeamSectionProps) {
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Role</label>
                         <Select name="role" defaultValue="4" required>
-                            <SelectTrigger>
+                            <SelectTrigger className="h-10 w-full">
                                 <SelectValue placeholder="Select a role" />
                             </SelectTrigger>
                             <SelectContent>
@@ -127,7 +127,10 @@ export function TeamSection({ activeStore }: TeamSectionProps) {
                             </SelectContent>
                         </Select>
                     </div>
-                    <Button type="submit" className="w-full sm:w-auto">Add Member</Button>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium block invisible">&nbsp;</label>
+                        <Button type="submit" className="w-full">Add Member</Button>
+                    </div>
                 </form>
             </div>
 

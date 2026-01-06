@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, Settings, Plus, AlertTriangle, Trash2 } from "lucide-react"
+import { ArrowLeft, Settings, Plus, AlertTriangle, Trash2, Search } from "lucide-react"
 import { fetchCustomers, createCustomer, fetchCustomerUsers, createCustomerUser, updateCustomerUser, deleteCustomerUser, resendCustomerUserInvite } from "@/lib/api"
 import { toast } from "sonner"
 import { EditCustomerDialog } from "../edit-customer-dialog"
@@ -38,6 +38,8 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
         if (!activeCustomerId || customers.length === 0) return null
         return customers.find(c => c.id === activeCustomerId) || null
     }, [activeCustomerId, customers])
+
+    const [searchQuery, setSearchQuery] = useState("")
 
     useEffect(() => {
         loadCustomers()
@@ -182,6 +184,12 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
         }
     }
 
+    // Filtered Customers
+    const filteredCustomers = customers.filter(c =>
+        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (c.GSTIN || "").toLowerCase().includes(searchQuery.toLowerCase())
+    )
+
     return (
         <div className="space-y-6">
             {/* Contextual Back Button */}
@@ -207,7 +215,16 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
             {mode === 'list' && (
                 <div className="space-y-6">
                     {/* Add Customer Button */}
-                    <div className="flex flex-col sm:flex-row justify-end gap-2">
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div className="relative w-full sm:w-72">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                                placeholder="Search customers..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-9 bg-white"
+                            />
+                        </div>
                         <Button onClick={() => setEditingCustomer({ isNew: true })} className="w-full sm:w-auto">
                             <Plus className="mr-2 h-4 w-4" /> Add New Customer
                         </Button>
@@ -226,9 +243,9 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {customers.length === 0 ? (
-                                        <tr><td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">No customers found.</td></tr>
-                                    ) : customers.map((customer) => {
+                                    {filteredCustomers.length === 0 ? (
+                                        <tr><td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">No customers found.</td></tr>
+                                    ) : filteredCustomers.map((customer) => {
                                         // Compliance Check
                                         const missingBranches = !customer.branches || customer.branches.length === 0;
                                         const missingTerms = !customer.paymentTerms || !customer.deliveryTime;

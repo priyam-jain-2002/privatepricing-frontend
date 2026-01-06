@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Plus, Settings, Info } from "lucide-react"
+import { Plus, Settings, Info, Search } from "lucide-react"
 import { fetchProducts, createProduct, updateProduct } from "@/lib/api"
 import { toast } from "sonner"
 import { OperationCostDialog } from "./operation-cost-dialog"
@@ -24,6 +24,7 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
     const [products, setProducts] = useState<any[]>([])
     const [isAddProductOpen, setIsAddProductOpen] = useState(false)
     const [editingProduct, setEditingProduct] = useState<any>(null)
+    const [searchQuery, setSearchQuery] = useState("")
 
     useEffect(() => {
         if (activeStore) {
@@ -83,6 +84,7 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
             await updateProduct(editingProduct.id, {
                 name: formData.get('name'),
                 sku: formData.get('sku'),
+                hsnCode: formData.get('hsnCode'),
             });
             await loadProducts();
             setEditingProduct(null);
@@ -91,6 +93,12 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
             toast.error("Failed to update product: " + err.message);
         }
     }
+
+    const filteredProducts = products.filter(p =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.hsnCode || "").toLowerCase().includes(searchQuery.toLowerCase())
+    )
 
     return (
         <div className="space-y-4">
@@ -102,16 +110,28 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
                     toast.success("Operation cost updated");
                 }}
             />
-            <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                    <div className="relative w-full sm:w-72">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                            placeholder="Search products..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-9 bg-white"
+                        />
+                    </div>
+                </div>
+
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                     <Button variant="outline" onClick={() => document.getElementById('operation-cost-trigger')?.click()} className="w-full sm:w-auto">
                         <Settings className="mr-2 h-4 w-4" />
-                        Operation Cost ({activeStore?.operationCostPercentage || 10}%)
+                        Op. Cost ({activeStore?.operationCostPercentage || 10}%)
+                    </Button>
+                    <Button onClick={() => setIsAddProductOpen(true)} className="w-full sm:w-auto">
+                        <Plus className="mr-2 h-4 w-4" /> Add Product
                     </Button>
                 </div>
-                <Button onClick={() => setIsAddProductOpen(true)} className="w-full sm:w-auto">
-                    <Plus className="mr-2 h-4 w-4" /> Add Product
-                </Button>
             </div>
 
             <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
@@ -172,9 +192,15 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
                             <label className="text-sm font-medium">Product Name</label>
                             <Input name="name" defaultValue={editingProduct?.name} required />
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">SKU</label>
-                            <Input name="sku" defaultValue={editingProduct?.sku} required />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">SKU</label>
+                                <Input name="sku" defaultValue={editingProduct?.sku} required />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">HSN Code</label>
+                                <Input name="hsnCode" defaultValue={editingProduct?.hsnCode} />
+                            </div>
                         </div>
                         <div className="flex justify-end gap-2">
                             <Button type="button" variant="ghost" onClick={() => setEditingProduct(null)}>Cancel</Button>
@@ -214,9 +240,9 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
                             </tr>
                         </thead>
                         <tbody>
-                            {products.length === 0 ? (
-                                <tr><td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500">No products found.</td></tr>
-                            ) : products.map((product) => (
+                            {filteredProducts.length === 0 ? (
+                                <tr><td colSpan={8} className="px-6 py-8 text-center text-sm text-gray-500">No products found.</td></tr>
+                            ) : filteredProducts.map((product) => (
                                 <ProductRow
                                     key={product.id}
                                     product={product}
