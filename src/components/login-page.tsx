@@ -1,15 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { fetchAPI, sendStorefrontVerificationCode, sendStorefrontPasswordResetCode, verifyStorefrontLoginCode, resetStorefrontPassword } from "@/lib/api"
-import { useEffect } from "react"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import Link from "next/link"
 
 interface LoginPageProps {
     storeName?: string
@@ -50,10 +50,6 @@ export function LoginPage({ storeName = "Private Pricing OS" }: LoginPageProps) 
                 // Must be verified
                 setTempStoreId(data.storeId)
                 setStep('otp')
-                // Wait, standard login didn't trigger email send automatically like storefront-login?
-                // Actually, StorefrontService logic (reused in StorefrontLogin) did.
-                // Here, "login" endpoint just returns flag. 
-                // We must trigger send MANUALLY.
                 await triggerSendCode(data.storeId, email, 'verification')
             } else if (data.accessToken) {
                 finalizeLogin(data)
@@ -153,14 +149,11 @@ export function LoginPage({ storeName = "Private Pricing OS" }: LoginPageProps) 
     }
 
     const handleResend = async () => {
-        if (!tempStoreId && step !== 'reset-otp') return // Need tempStoreId for verification resend
-        // For reset-otp, we can resend without known storeId if we treat it like initial forgot password? 
-        // Actually, we SAVED tempStoreId in handleForgotPassword response. So we DO have it.
+        if (!tempStoreId && step !== 'reset-otp') return
 
         setResendCooldown(30)
         try {
             if (step === 'reset-otp') {
-                // If we have tempStoreId use it, else null
                 await sendStorefrontPasswordResetCode(tempStoreId || null, email)
                 toast.success("Code Resent")
             } else {
@@ -179,109 +172,92 @@ export function LoginPage({ storeName = "Private Pricing OS" }: LoginPageProps) 
     }
 
     return (
-        <div className="flex items-center justify-center min-h-screen p-4 bg-slate-50 relative overflow-hidden">
-            <div className="absolute top-0 -left-4 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-            <div className="absolute top-0 -right-4 w-96 h-96 bg-indigo-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
-            <div className="absolute -bottom-8 left-20 w-96 h-96 bg-purple-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+            <Link href="/" className="mb-8 block">
+                <span className="font-serif text-2xl font-bold tracking-tight text-foreground">
+                    opbase
+                </span>
+            </Link>
 
-            <div className="w-full max-w-md animate-in fade-in zoom-in duration-700 slide-in-from-bottom-8">
-                <Card className="border-gray-200/50 bg-white/70 backdrop-blur-xl shadow-2xl relative overflow-hidden ring-1 ring-black/5">
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/90 to-transparent pointer-events-none"></div>
+            <Card className="w-full max-w-sm border-0 shadow-none sm:border sm:border-border/50 bg-card rounded-lg relative overflow-hidden">
+                <CardHeader className="text-center space-y-2 pb-6">
+                    <CardTitle className="text-xl font-medium tracking-tight text-foreground">
+                        {step === 'credentials' ? "Sign in" :
+                            step === 'reset-otp' ? "Reset Password" : "Verification"}
+                    </CardTitle>
+                    <CardDescription className="text-sm text-muted-foreground">
+                        {step === 'credentials' ? "Access your workspace." :
+                            step === 'reset-otp' ? "Enter the code sent to your email." :
+                                `We sent a code to ${email}`}
+                    </CardDescription>
+                </CardHeader>
 
-                    <CardHeader className="space-y-2 text-center relative pt-8">
-                        <div className="mx-auto w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/20">
-                            <span className="text-white text-xl font-bold">P</span>
-                        </div>
-                        <CardTitle className="text-3xl font-extrabold tracking-tight text-slate-900">
-                            {storeName}
-                        </CardTitle>
-                        <CardDescription>
-                            {step === 'credentials' ? "Sign in to your dashboard" :
-                                step === 'reset-otp' ? "Enter code and new password" :
-                                    `Verification code sent to ${email}`}
-                        </CardDescription>
-                    </CardHeader>
-
+                <CardContent className="space-y-4">
                     {step === 'credentials' ? (
-                        <form onSubmit={handleLogin}>
-                            <CardContent className="space-y-6 relative pb-8">
-                                <div className="space-y-2">
-                                    <Label htmlFor="email" className="text-slate-700 font-medium ml-1">Email Address</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        placeholder="you@company.com"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        required
-                                        className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                                    />
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="email" className="sr-only">Email</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    placeholder="name@company.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                    className="h-10 bg-muted/20 border-border focus:ring-1 focus:ring-primary focus:border-primary transition-all placeholder:text-muted-foreground/60 w-full"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="password" className="sr-only">Password</Label>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                    className="h-10 bg-muted/20 border-border focus:ring-1 focus:ring-primary focus:border-primary transition-all placeholder:text-muted-foreground/60 w-full"
+                                />
+                            </div>
+
+                            {error && (
+                                <div className="text-sm text-destructive bg-destructive/5 p-3 rounded-md border border-destructive/10">
+                                    {error}
                                 </div>
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between ml-1">
-                                        <Label htmlFor="password" className="text-slate-700 font-medium">Password</Label>
-                                        <button type="button" onClick={handleForgotPassword} className="text-xs text-blue-600 hover:text-blue-700 font-semibold transition-colors">Forgot password?</button>
-                                    </div>
-                                    <Input
-                                        id="password"
-                                        type="password"
-                                        placeholder="••••••••"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        required
-                                        className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                                    />
-                                </div>
-                                {error && (
-                                    <div className="text-sm font-medium text-red-600 bg-red-50 p-4 rounded-xl border border-red-100 animate-in fade-in slide-in-from-top-2">
-                                        {error}
-                                    </div>
-                                )}
-                            </CardContent>
-                            <CardFooter className="flex flex-col gap-4 pb-10">
-                                <Button
-                                    type="submit"
-                                    className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-all duration-200 shadow-lg shadow-blue-600/20 active:scale-[0.98]"
-                                    disabled={loading}
-                                >
-                                    {loading ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                            Authenticating...
-                                        </>
-                                    ) : (
-                                        "Sign In"
-                                    )}
-                                </Button>
-                            </CardFooter>
+                            )}
+
+                            <Button
+                                type="submit"
+                                className="w-full h-10 bg-primary hover:bg-primary/90 text-white font-medium transition-all shadow-sm active:scale-[0.99]"
+                                disabled={loading}
+                            >
+                                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue"}
+                            </Button>
+
+                            <div className="flex justify-between items-center text-xs mt-4">
+                                <span className="text-muted-foreground">Forgot password?</span>
+                                <button type="button" onClick={handleForgotPassword} className="text-primary hover:underline font-medium">Reset here</button>
+                            </div>
                         </form>
-                    ) : step === 'reset-otp' ? (
-                        <form onSubmit={handleResetPassword}>
-                            <CardContent className="space-y-6 relative pb-8">
+                    ) : (
+                        <form onSubmit={step === 'reset-otp' ? handleResetPassword : handleVerifyCode} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="otp" className="sr-only">Code</Label>
+                                <Input
+                                    id="otp"
+                                    type="text"
+                                    placeholder="123456"
+                                    value={otp}
+                                    onChange={(e) => setOtp(e.target.value)}
+                                    required
+                                    maxLength={6}
+                                    className="h-10 bg-muted/20 border-border focus:ring-1 focus:ring-primary focus:border-primary text-center tracking-widest"
+                                />
+                            </div>
+
+                            {step === 'reset-otp' && (
                                 <div className="space-y-2">
-                                    <div className="flex justify-between items-center ml-1">
-                                        <Label htmlFor="otp" className="text-slate-700 font-medium">Reset Code</Label>
-                                        <button
-                                            type="button"
-                                            onClick={() => setStep('credentials')}
-                                            className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
-                                    <Input
-                                        id="otp"
-                                        type="text"
-                                        placeholder="123456"
-                                        value={otp}
-                                        onChange={(e) => setOtp(e.target.value)}
-                                        required
-                                        maxLength={6}
-                                        className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="new-password" className="text-slate-700 font-medium ml-1">New Password</Label>
+                                    <Label htmlFor="new-password" className="sr-only">New Password</Label>
                                     <Input
                                         id="new-password"
                                         type="password"
@@ -289,92 +265,55 @@ export function LoginPage({ storeName = "Private Pricing OS" }: LoginPageProps) 
                                         value={newPassword}
                                         onChange={(e) => setNewPassword(e.target.value)}
                                         required
-                                        className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                        className="h-10 bg-muted/20 border-border"
                                     />
                                 </div>
-                                {error && (
-                                    <div className="text-sm font-medium text-red-600 bg-red-50 p-4 rounded-xl border border-red-100 animate-in fade-in slide-in-from-top-2">
-                                        {error}
-                                    </div>
-                                )}
-                            </CardContent>
-                            <CardFooter className="flex flex-col gap-4 pb-10">
-                                <Button
-                                    type="submit"
-                                    className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-all duration-200 shadow-lg shadow-blue-600/20 active:scale-[0.98]"
-                                    disabled={loading}
+                            )}
+
+                            {error && (
+                                <div className="text-sm text-destructive bg-destructive/5 p-3 rounded-md border border-destructive/10">
+                                    {error}
+                                </div>
+                            )}
+
+                            <Button
+                                type="submit"
+                                className="w-full h-10 bg-primary hover:bg-primary/90 text-white font-medium transition-all shadow-sm active:scale-[0.99]"
+                                disabled={loading}
+                            >
+                                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (step === 'reset-otp' ? "Reset Password" : "Verify")}
+                            </Button>
+
+                            <div className="flex justify-between items-center text-xs mt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setStep('credentials')}
+                                    className="text-muted-foreground hover:text-foreground"
                                 >
-                                    {loading ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                            Resetting...
-                                        </>
-                                    ) : (
-                                        "Reset Password"
-                                    )}
-                                </Button>
+                                    Cancel
+                                </button>
                                 <button
                                     type="button"
                                     onClick={handleResend}
-                                    className="text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="text-primary hover:underline disabled:opacity-50"
                                     disabled={resendCooldown > 0}
                                 >
-                                    {resendCooldown > 0 ? `Resend Code in ${resendCooldown}s` : "Resend Code"}
+                                    {resendCooldown > 0 ? `${resendCooldown}s` : "Resend"}
                                 </button>
-                            </CardFooter>
-                        </form>
-                    ) : (
-                        <form onSubmit={handleVerifyCode}>
-                            <CardContent className="space-y-6 relative pb-8">
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center ml-1">
-                                        <Label htmlFor="otp" className="text-slate-700 font-medium">Verification Code</Label>
-                                        <button
-                                            type="button"
-                                            onClick={() => setStep('credentials')}
-                                            className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                                        >
-                                            Change Email
-                                        </button>
-                                    </div>
-                                    <Input
-                                        id="otp"
-                                        type="text"
-                                        placeholder="123456"
-                                        value={otp}
-                                        onChange={(e) => setOtp(e.target.value)}
-                                        required
-                                        maxLength={6}
-                                        className="h-12 bg-white/50 border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                                    />
-                                </div>
-                                {error && (
-                                    <div className="text-sm font-medium text-red-600 bg-red-50 p-4 rounded-xl border border-red-100 animate-in fade-in slide-in-from-top-2">
-                                        {error}
-                                    </div>
-                                )}
-                            </CardContent>
-                            <CardFooter className="flex flex-col gap-4 pb-10">
-                                <Button
-                                    type="submit"
-                                    className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-all duration-200 shadow-lg shadow-blue-600/20 active:scale-[0.98]"
-                                    disabled={loading}
-                                >
-                                    {loading ? "Verifying..." : "Verify & Sign In"}
-                                </Button>
-                                <button
-                                    type="button"
-                                    onClick={handleResend}
-                                    className="text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    disabled={resendCooldown > 0}
-                                >
-                                    {resendCooldown > 0 ? `Resend Code in ${resendCooldown}s` : "Resend Code"}
-                                </button>
-                            </CardFooter>
+                            </div>
                         </form>
                     )}
-                </Card>
-            </div>
+                </CardContent>
+
+                <CardFooter className="flex flex-col gap-2 border-t border-border/40 p-6 bg-muted/10 text-center">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                        This system is usually accessed by invited teams or customers.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                        If you were invited, use the email you received the link on.
+                    </p>
+                </CardFooter>
+            </Card>
         </div>
     )
 }
