@@ -21,7 +21,9 @@ export function middleware(request: NextRequest) {
         const rootDomainNoPort = rootDomain.split(':')[0]
         const hostnameNoPort = hostname.split(':')[0]
 
-        if (hostnameNoPort !== rootDomainNoPort && hostnameNoPort.endsWith(rootDomainNoPort)) {
+        if (hostname.startsWith('www.')) {
+            isSubdomain = false
+        } else if (hostnameNoPort !== rootDomainNoPort && hostnameNoPort.endsWith(rootDomainNoPort)) {
             isSubdomain = true
         } else if (hostnameNoPort !== 'localhost' && rootDomainNoPort === 'localhost') {
             // Handle localhost subdomains specifically if needed, e.g. "test.localhost"
