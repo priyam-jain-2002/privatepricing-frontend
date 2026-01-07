@@ -12,6 +12,11 @@ export default function StorefrontLoginRoute() {
 
     useEffect(() => {
         async function loadContext() {
+            const currentHost = window.location.hostname;
+            if (currentHost === 'opbase.in' || currentHost.startsWith('www.')) {
+                window.location.href = '/';
+                return;
+            }
             // 0. Check for existing session
             const token = localStorage.getItem('access_token');
             const role = localStorage.getItem('user_role');
