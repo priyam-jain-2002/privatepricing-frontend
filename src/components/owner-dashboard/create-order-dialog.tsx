@@ -231,7 +231,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
         if (!Array.isArray(products) || !products.length) return []
 
         return products.map(p => {
-            let effectivePrice = p.basePrice || 0
+            let effectivePrice = Number(p.basePrice) || 0
 
             if (orderType === 'customer') {
                 const pricing = Array.isArray(customerPricings) ? customerPricings.find((cp: any) => cp.productId === p.id) : null

@@ -33,7 +33,7 @@ const filterOptions = [
     { id: '1', label: 'Pending' },
     { id: '2', label: 'Processing' },
     { id: '3', label: 'Shipped' },
-    { id: '4', label: 'PI' },
+    { id: '4', label: 'Pending Invoice' },
     { id: '5', label: 'Completed' },
     { id: '6', label: 'Cancelled' },
 ]

@@ -353,11 +353,11 @@ export async function updateProductPricing(productId: string, data: any) {
 }
 
 export async function getCustomerPricings(storeId: string, customerId: string) {
-    return fetchAPI(`/stores/${storeId}/customer-product-pricings/customers/${customerId}`, { headers: getAuthHeaders() });
+    return fetchAPI(`/stores/${storeId}/customers/${customerId}/pricing`, { headers: getAuthHeaders() });
 }
 
-export async function createCustomerPricing(storeId: string, data: any) {
-    return fetchAPI(`/stores/${storeId}/customer-product-pricings`, {
+export async function createCustomerPricing(storeId: string, customerId: string, data: any) {
+    return fetchAPI(`/stores/${storeId}/customers/${customerId}/pricing`, {
         method: 'POST',
         body: JSON.stringify(data),
         headers: getAuthHeaders()
@@ -365,8 +365,8 @@ export async function createCustomerPricing(storeId: string, data: any) {
 }
 
 export async function updateCustomerPricing(storeId: string, customerId: string, productId: string, data: any) {
-    return fetchAPI(`/stores/${storeId}/customer-product-pricings/customers/${customerId}/products/${productId}`, {
-        method: 'PATCH',
+    return fetchAPI(`/stores/${storeId}/customers/${customerId}/pricing/${productId}`, {
+        method: 'PUT',
         body: JSON.stringify(data),
         headers: getAuthHeaders()
     });
