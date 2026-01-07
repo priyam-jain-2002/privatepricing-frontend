@@ -20,19 +20,10 @@ import {
 import { Badge } from "@/components/ui/badge"
 
 import { CreateOrderDialog } from "./create-order-dialog"
+import { STATUS_CONFIG } from "@/lib/order-status"
 
 interface OrdersSectionProps {
     activeStore: any
-}
-
-const statusConfig: Record<number, { label: string, variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info" | "purple" | "indigo" }> = {
-    0: { label: "Requested", variant: "warning" },
-    1: { label: "Pending", variant: "secondary" },
-    2: { label: "Processing", variant: "info" },
-    3: { label: "Shipped", variant: "purple" },
-    4: { label: "PI", variant: "indigo" },
-    5: { label: "Completed", variant: "success" },
-    6: { label: "Cancelled", variant: "destructive" },
 }
 
 const filterOptions = [
@@ -109,7 +100,7 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
             if (activeFilter === 'active') {
                 return order.status !== 5 && order.status !== 6;
             }
-            return order.status === parseInt(activeFilter);
+            return Number(order.status) === parseInt(activeFilter);
         }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }, [orders, searchQuery, activeFilter]);
 
@@ -239,13 +230,13 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                                             >
                                                 <SelectTrigger className="w-[140px] h-8 text-xs font-medium rounded-full border-gray-200">
                                                     <SelectValue>
-                                                        <Badge variant={statusConfig[order.status]?.variant || "secondary"} className="h-5">
-                                                            {statusConfig[order.status]?.label || order.status}
+                                                        <Badge variant={STATUS_CONFIG[order.status]?.variant || "secondary"} className="h-5">
+                                                            {STATUS_CONFIG[order.status]?.label || order.status}
                                                         </Badge>
                                                     </SelectValue>
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {Object.entries(statusConfig).map(([value, { label }]) => (
+                                                    {Object.entries(STATUS_CONFIG).map(([value, { label }]) => (
                                                         <SelectItem key={value} value={value} className="text-xs">
                                                             {label}
                                                         </SelectItem>

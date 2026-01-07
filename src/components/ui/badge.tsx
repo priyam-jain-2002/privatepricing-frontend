@@ -3,22 +3,22 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-    "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
     {
         variants: {
             variant: {
                 default:
-                    "border-transparent bg-primary/10 text-primary hover:bg-primary/20",
+                    "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
                 secondary:
-                    "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+                    "border-gray-200 bg-gray-100 text-gray-700 hover:bg-gray-100/80",
                 destructive:
-                    "border-transparent bg-red-100 text-red-900 hover:bg-red-200/80",
+                    "border-red-200 bg-red-50 text-red-700 hover:bg-red-50/80",
                 outline: "text-foreground",
-                success: "border-transparent bg-emerald-100 text-emerald-900 hover:bg-emerald-200/80",
-                warning: "border-transparent bg-amber-100 text-amber-900 hover:bg-amber-200/80",
-                info: "border-transparent bg-blue-100 text-blue-900 hover:bg-blue-200/80",
-                purple: "border-transparent bg-purple-100 text-purple-900 hover:bg-purple-200/80",
-                indigo: "border-transparent bg-indigo-100 text-indigo-900 hover:bg-indigo-200/80",
+                success: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50/80",
+                warning: "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50/80",
+                info: "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-50/80",
+                purple: "border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-50/80",
+                indigo: "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-50/80",
             },
         },
         defaultVariants: {

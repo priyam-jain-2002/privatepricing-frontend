@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { format } from "date-fns"
 import { PayOrderDialog } from "@/components/order-invoice-dialog"
+import { STATUS_CONFIG, COMPLETED_STATUSES } from "@/lib/order-status"
+import { Badge } from "@/components/ui/badge"
 
 export default function StorefrontOrdersPage() {
     const { authContext, accessToken, loading: contextLoading } = useStorefront()
@@ -40,8 +42,8 @@ export default function StorefrontOrdersPage() {
 
     const filteredOrders = orders.filter(o =>
         showHistory
-            ? ['completed', 'cancelled'].includes(o.status)
-            : !['completed', 'cancelled'].includes(o.status)
+            ? COMPLETED_STATUSES.includes(o.status)
+            : !COMPLETED_STATUSES.includes(o.status)
     )
 
     if (contextLoading) return null; // Let layout handle loading spinner
@@ -107,34 +109,33 @@ export default function StorefrontOrdersPage() {
                                             </td>
                                         </tr>
                                     ) : (
-                                        filteredOrders.map((order) => (
-                                            <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                    #{order.orderNumber}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {format(new Date(order.createdAt), "MMM d, yyyy")}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
-                                                        ${order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                                            order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                                                order.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                                                                    'bg-yellow-100 text-yellow-800'}`}>
-                                                        {order.status}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {order.items?.length || 0} items
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
-                                                    {order.currency} {Number(order.totalAmount).toFixed(2)}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                    <Button variant="ghost" size="sm" onClick={() => setViewingOrder(order)}>View Details</Button>
-                                                </td>
-                                            </tr>
-                                        ))
+                                        filteredOrders.map((order) => {
+                                            const status = STATUS_CONFIG[order.status] || { label: 'Unknown', variant: 'secondary' }
+                                            return (
+                                                <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                        #{order.orderNumber}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        {format(new Date(order.createdAt), "MMM d, yyyy")}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <Badge variant={status.variant}>
+                                                            {status.label}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        {order.items?.length || 0} items
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
+                                                        {order.currency} {Number(order.totalAmount).toFixed(2)}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                        <Button variant="ghost" size="sm" onClick={() => setViewingOrder(order)}>View Details</Button>
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })
                                     )}
                                 </tbody>
                             </table>
