@@ -1,6 +1,9 @@
+"use client"
+
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
+import posthog from "posthog-js";
 
 export function Hero() {
     return (
@@ -21,12 +24,14 @@ export function Hero() {
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
                     <Link
                         href="/#book-demo"
+                        onClick={() => posthog.capture('book_demo_clicked', { location: 'hero' })}
                         className="bg-primary text-primary-foreground px-10 py-4 rounded-md text-[16px] font-medium transition-all hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5"
                     >
                         Book a Demo
                     </Link>
                     <Link
                         href="/#how-it-works"
+                        onClick={() => posthog.capture('how_it_works_clicked', { location: 'hero' })}
                         className="text-muted-foreground hover:text-foreground text-[16px] transition-colors flex items-center gap-2 group px-6 py-4"
                     >
                         See how it works

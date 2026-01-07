@@ -11,6 +11,7 @@ import { Audience } from "@/components/landing-page/audience"
 import { Footer } from "@/components/landing-page/footer"
 import { LandingLayout } from "@/components/landing-page/landing-layout"
 import { DemoSection } from "@/components/landing-page/demo-section"
+import { SectionTracker } from "@/components/landing-page/section-tracker"
 
 export default function StorefrontPage() {
   const router = useRouter()
@@ -74,12 +75,24 @@ export default function StorefrontPage() {
   return (
     <LandingLayout>
       <Navbar />
-      <Hero />
-      <TraitsGrid />
-      <DemoSection />
-      <Perspective />
-      <Audience />
-      <Footer />
+      <SectionTracker name="hero">
+        <Hero />
+      </SectionTracker>
+      <SectionTracker name="traits">
+        <TraitsGrid />
+      </SectionTracker>
+      <SectionTracker name="demo">
+        <DemoSection />
+      </SectionTracker>
+      <SectionTracker name="perspective">
+        <Perspective />
+      </SectionTracker>
+      <SectionTracker name="audience">
+        <Audience />
+      </SectionTracker>
+      <SectionTracker name="footer">
+        <Footer />
+      </SectionTracker>
     </LandingLayout>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react"
+import posthog from "posthog-js"
 
 export function Footer() {
     const [email, setEmail] = useState("")
@@ -10,6 +11,8 @@ export function Footer() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setStatus("loading")
+
+        posthog.capture('demo_requested', { email })
 
         // Mock API call
         await new Promise(resolve => setTimeout(resolve, 1500))

@@ -1,4 +1,7 @@
+"use client"
+
 import Link from "next/link"
+import posthog from "posthog-js"
 
 export function Navbar() {
     return (
@@ -13,12 +16,14 @@ export function Navbar() {
                     <div className="hidden md:flex items-center gap-6">
                         <Link
                             href="/login"
+                            onClick={() => posthog.capture('sign_in_clicked', { location: 'navbar' })}
                             className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                         >
                             Sign in
                         </Link>
                         <Link
                             href="/#book-demo"
+                            onClick={() => posthog.capture('book_demo_clicked', { location: 'navbar' })}
                             className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium transition-all hover:bg-primary/90 hover:shadow-sm"
                         >
                             Book Demo
