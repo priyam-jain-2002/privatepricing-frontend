@@ -30,7 +30,7 @@ export default function StorefrontPage() {
     // If hostname ends with .rootDomain, it's a subdomain.
 
     let isSubdomain = false
-    if (hostname === rootDomain || hostname === 'localhost') {
+    if (hostname === rootDomain || hostname === `www.${rootDomain}` || hostname === 'localhost') {
       isSubdomain = false
     } else if (hostname.endsWith(`.${rootDomain}`)) {
       isSubdomain = true
