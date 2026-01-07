@@ -195,6 +195,8 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                                                 onValueChange={async (value) => {
                                                     try {
                                                         const statusInt = parseInt(value)
+                                                        if (!window.confirm("Are you sure you want to update this order status?")) return;
+
                                                         await updateOrderStatus(activeStore.id, order.id, statusInt);
 
                                                         const props: any = {
@@ -222,7 +224,6 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                                                         }
 
                                                         await loadOrders();
-                                                        toast.success("Order status updated");
                                                     } catch (err: any) {
                                                         toast.error("Failed to update status: " + err.message);
                                                     }

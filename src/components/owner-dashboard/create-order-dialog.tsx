@@ -8,6 +8,7 @@ import {
     DialogDescription,
     DialogHeader,
     DialogTitle,
+    DialogFooter,
 } from "@/components/ui/dialog"
 import {
     Select,
@@ -81,6 +82,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
     // Order Type State
     const [orderType, setOrderType] = useState<'customer' | 'quick'>('quick')
     const [quickOrderSource, setQuickOrderSource] = useState<string>("walkin")
+    const [showConfirm, setShowConfirm] = useState(false)
 
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>("")
     const [selectedBranchId, setSelectedBranchId] = useState<string>("no-branch")
@@ -315,16 +317,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
         return { subtotal, tax, total: subtotal + tax, itemCount }
     }, [cart, availableProducts])
 
-    const handleSubmit = async () => {
-        if (orderType === 'customer' && !selectedCustomerId) {
-            toast.error("Please select a customer")
-            return
-        }
-        if (cart.length === 0) {
-            toast.error("Cart is empty")
-            return
-        }
-
+    const executeOrderSubmission = async () => {
         setSubmitting(true)
         try {
             const finalShippingBranchId = selectedBranchId === "no-branch" ? null : selectedBranchId
@@ -346,37 +339,21 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
 
             if (orderType === 'customer') {
                 const customer = customers.find(c => c.id === selectedCustomerId)
-                const useSame = customer?.isBillToSameAsShipTo ?? false // Default to false if undefined? Actually entity default is false. 
-                // But wait, if IsBillToSameAsShipTo is TRUE, we force same.
+                const useSame = customer?.isBillToSameAsShipTo ?? false
 
                 payload.shippingBranchId = finalShippingBranchId
 
                 if (useSame) {
                     payload.billingBranchId = finalShippingBranchId
                 } else {
-                    // If user didn't select billing branch (kept at default/no-branch), maybe default to shipping?
-                    // Or send null? If separate, they might want head office (null). 
-                    // Let's rely on what they picked. If they picked "no-branch", it's head office (null).
-                    payload.billingBranchId = finalBillingBranchId || finalShippingBranchId // Fallback to shipping if not set? 
-                    // Better validation: If displayed, force selection or default to 'no-branch'.
-                    // If 'no-branch' is selected, it sends null.
-                    // If 'billingBranchId' is 'no-branch', sending null is correct for Head Office.
+                    payload.billingBranchId = finalBillingBranchId || finalShippingBranchId
                 }
-            } else if (finalShippingBranchId) { // Quick Order case (less likely to have branches but code handles it)
+            } else if (finalShippingBranchId) {
                 payload.shippingBranchId = finalShippingBranchId;
                 payload.billingBranchId = finalShippingBranchId;
             }
 
             if (initialOrder) {
-                // Warning for Edit
-                if (!window.confirm("WARNING: You are editing an existing order.\n\nThis will completely overwrite items and recalculate totals. The previous audit trail will note these changes.\n\nAre you sure you want to proceed?")) {
-                    setSubmitting(false)
-                    return
-                }
-
-                // Add change reason? For now, we don't have a UI for it, maybe prompt? 
-                // Or just proceed.
-
                 await updateTeamOrder(activeStore.id, initialOrder.id, payload)
                 toast.success("Order updated successfully")
 
@@ -403,6 +380,24 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
             toast.error(`Failed to ${initialOrder ? 'update' : 'create'} order: ` + err.message)
         } finally {
             setSubmitting(false)
+            setShowConfirm(false)
+        }
+    }
+
+    const handleSubmit = async () => {
+        if (orderType === 'customer' && !selectedCustomerId) {
+            toast.error("Please select a customer")
+            return
+        }
+        if (cart.length === 0) {
+            toast.error("Cart is empty")
+            return
+        }
+
+        if (initialOrder) {
+            setShowConfirm(true)
+        } else {
+            await executeOrderSubmission()
         }
     }
 
@@ -836,6 +831,26 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
                     </div>
                 </div>
             </DialogContent>
+
+            <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Update Order?</DialogTitle>
+                        <DialogDescription>
+                            WARNING: You are editing an existing order. This will overwrite the existing order detials.
+                            <br /><br />
+                            The previous audit trail will note these changes.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowConfirm(false)}>Cancel</Button>
+                        <Button onClick={executeOrderSubmission} disabled={submitting}>
+                            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Confirm Update
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </Dialog>
     )
 }
