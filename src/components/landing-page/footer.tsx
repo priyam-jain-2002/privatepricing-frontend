@@ -27,7 +27,7 @@ export function Footer() {
 
                 {/* Book a Demo Section (Merged from Early Access) */}
                 {/* Book a Demo Section (Merged from Early Access) */}
-                <div id="book-demo" className="mb-24 flex flex-col md:flex-row items-start md:items-center justify-between gap-12 scroll-mt-24">
+                <div id="early-access" className="mb-24 flex flex-col md:flex-row items-start md:items-center justify-between gap-12 scroll-mt-24">
                     <div className="max-w-xl">
                         <h2 className="text-3xl sm:text-4xl font-serif mb-6 tracking-tight text-white">
                             Book a Demo.

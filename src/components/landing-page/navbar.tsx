@@ -22,7 +22,7 @@ export function Navbar() {
                             Sign in
                         </Link>
                         <Link
-                            href="/#book-demo"
+                            href="/#early-access"
                             onClick={() => posthog.capture('book_demo_clicked', { location: 'navbar' })}
                             className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium transition-all hover:bg-primary/90 hover:shadow-sm"
                         >

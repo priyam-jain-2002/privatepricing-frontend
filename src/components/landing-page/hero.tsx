@@ -23,7 +23,7 @@ export function Hero() {
 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
                     <Link
-                        href="/#book-demo"
+                        href="/#early-access"
                         onClick={() => posthog.capture('book_demo_clicked', { location: 'hero' })}
                         className="bg-primary text-primary-foreground px-10 py-4 rounded-md text-[16px] font-medium transition-all hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5"
                     >

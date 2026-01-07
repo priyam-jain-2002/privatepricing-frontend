@@ -62,6 +62,18 @@ export default function StorefrontPage() {
     }
   }, [router])
 
+  useEffect(() => {
+    if (!checkingSubdomain && window.location.hash) {
+      const id = window.location.hash.substring(1)
+      const element = document.getElementById(id)
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' })
+        }, 100)
+      }
+    }
+  }, [checkingSubdomain])
+
   // If we are strictly checking for subdomain redirect, show loader.
   // Once we determine it is NOT a subdomain, we show the landing page.
   if (checkingSubdomain) {

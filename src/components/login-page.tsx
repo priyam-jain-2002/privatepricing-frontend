@@ -10,6 +10,7 @@ import { fetchAPI, sendStorefrontVerificationCode, sendStorefrontPasswordResetCo
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
+import posthog from "posthog-js"
 
 interface LoginPageProps {
     storeName?: string
@@ -305,13 +306,23 @@ export function LoginPage({ storeName = "Private Pricing OS" }: LoginPageProps) 
                     )}
                 </CardContent>
 
-                <CardFooter className="flex flex-col gap-2 border-t border-border/40 p-6 bg-muted/10 text-center">
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                        This system is usually accessed by invited teams or customers.
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                        If you were invited, use the email you received the link on.
-                    </p>
+                <CardFooter className="flex flex-col gap-4 border-t border-border/40 p-6 bg-muted/10 text-center">
+                    <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                            This system is usually accessed by invited teams or customers.
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            If you were invited, use the email you received the link on.
+                        </p>
+                    </div>
+
+                    <Link
+                        href="/#early-access"
+                        onClick={() => posthog.capture('book_demo_clicked', { location: 'login_page' })}
+                        className="text-xs font-medium text-primary hover:text-primary/80 hover:underline transition-all flex items-center justify-center gap-1 mt-2"
+                    >
+                        Don't have an account? Request a Demo
+                    </Link>
                 </CardFooter>
             </Card>
         </div>
