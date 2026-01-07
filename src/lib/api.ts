@@ -71,6 +71,8 @@ async function refreshAuthToken(): Promise<string | null> {
 
 export async function fetchAPI(path: string, options: RequestInit = {}) {
     const url = path.startsWith('/') ? `${API_URL}${path}` : `${API_URL}/${path}`;
+    console.log(`[API] Fetching: ${url}`, { method: options.method || 'GET', headers: options.headers });
+
 
     const makeRequest = async (token?: string) => {
         const headers: any = {
@@ -445,5 +447,12 @@ export async function completeStorefrontRegistration(data: { storeId: string, em
     return fetchAPI('/storefront/auth/complete-registration', {
         method: 'POST',
         body: JSON.stringify(data)
+    });
+}
+
+export async function submitDemoRequest(email: string) {
+    return fetchAPI('/demo-requests', {
+        method: 'POST',
+        body: JSON.stringify({ email })
     });
 }

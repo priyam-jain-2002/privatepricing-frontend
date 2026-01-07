@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react"
 import posthog from "posthog-js"
+import { submitDemoRequest } from "@/lib/api"
 
 export function Footer() {
     const [email, setEmail] = useState("")
@@ -14,11 +15,16 @@ export function Footer() {
 
         posthog.capture('demo_requested', { email })
 
-        // Mock API call
-        await new Promise(resolve => setTimeout(resolve, 1500))
-
-        setStatus("success")
-        setEmail("")
+        try {
+            await submitDemoRequest(email)
+            setStatus("success")
+            setEmail("")
+        } catch (error) {
+            console.error("Demo request failed", error)
+            setStatus("idle")
+            // Optionally show error toast or alert here
+            alert("Something went wrong. Please try again.")
+        }
     }
 
     return (
