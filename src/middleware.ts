@@ -21,7 +21,7 @@ export function middleware(request: NextRequest) {
         const rootDomainNoPort = rootDomain.split(':')[0]
         const hostnameNoPort = hostname.split(':')[0]
 
-        if (hostname.startsWith('www.')) {
+        if (hostname.startsWith('www.') || hostnameNoPort === 'opbase.in') {
             isSubdomain = false
         } else if (hostnameNoPort !== rootDomainNoPort && hostnameNoPort.endsWith(rootDomainNoPort)) {
             isSubdomain = true
