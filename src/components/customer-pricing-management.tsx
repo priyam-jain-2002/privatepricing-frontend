@@ -94,7 +94,7 @@ export function CustomerPricingManagement({ storeId, customerId, customer }: Cus
     setAddingId(product.id)
     try {
       // Create pricing with specific values if provided
-      const newPricing = await createCustomerPricing(storeId, {
+      const newPricing = await createCustomerPricing(storeId, customerId, {
         storeId,
         customerId,
         productId: product.id,
