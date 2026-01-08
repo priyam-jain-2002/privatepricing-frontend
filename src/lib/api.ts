@@ -332,8 +332,12 @@ export async function resetStorefrontPassword(storeId: string, email: string, co
     });
 }
 
-export async function fetchAllOrders(storeId: string) {
-    return fetchAPI(`/stores/${storeId}/orders`, { headers: getAuthHeaders() });
+export async function fetchAllOrders(storeId: string, statuses?: number[]) {
+    let url = `/stores/${storeId}/orders`;
+    if (statuses && statuses.length > 0) {
+        url += `?status=${statuses.join(',')}`;
+    }
+    return fetchAPI(url, { headers: getAuthHeaders() });
 }
 
 export async function updateOrderStatus(storeId: string, orderId: string, status: number) {
@@ -364,6 +368,10 @@ export async function createCustomerPricing(storeId: string, customerId: string,
     });
 }
 
+export async function fetchStoreStats(storeId: string) {
+    return fetchAPI(`/stores/${storeId}/stats`, { headers: getAuthHeaders() });
+}
+
 export async function updateCustomerPricing(storeId: string, customerId: string, productId: string, data: any) {
     return fetchAPI(`/stores/${storeId}/customers/${customerId}/pricing/${productId}`, {
         method: 'PUT',
@@ -392,16 +400,25 @@ export async function updateTeamOrder(storeId: string, orderId: string, data: an
     });
 }
 
-export async function fetchStorefrontOrders(customerId: string) {
-    return fetchAPI(`/storefront/customers/${customerId}/orders`, { headers: getAuthHeaders() });
+export async function fetchStorefrontOrders(customerId: string, statuses?: number[]) {
+    let url = `/storefront/customers/${customerId}/orders`;
+    if (statuses && statuses.length > 0) {
+        url += `?status=${statuses.join(',')}`;
+    }
+    return fetchAPI(url, { headers: getAuthHeaders() });
 }
 
 export async function fetchStorefrontCustomer(customerId: string) {
     return fetchAPI(`/storefront/customers/${customerId}`, { headers: getAuthHeaders() });
 }
 
+
 export async function fetchStorefrontBranches(customerId: string) {
     return fetchAPI(`/storefront/customers/${customerId}/branches`, { headers: getAuthHeaders() });
+}
+
+export async function fetchStorefrontStats(customerId: string) {
+    return fetchAPI(`/storefront/customers/${customerId}/stats`, { headers: getAuthHeaders() });
 }
 
 export async function fetchStorefrontStore(storeId: string) {
