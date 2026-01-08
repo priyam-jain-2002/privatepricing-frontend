@@ -16,16 +16,36 @@ export default function StorefrontOrdersPage() {
 
     const [orders, setOrders] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
-    const [showHistory, setShowHistory] = useState(false)
+    const [activeTab, setActiveTab] = useState<'requested' | 'active' | 'pi' | 'history'>('active')
     const [viewingOrder, setViewingOrder] = useState<any>(null)
+
 
     useEffect(() => {
         if (!authContext?.customer?.id || !accessToken) return
 
+
+
         async function loadOrders() {
             try {
                 setLoading(true)
-                const data = await fetchStorefrontOrders(authContext!.customer!.id)
+                // Tabs & Statuses:
+                // Requested: 0
+                // Active: 1 (Pending), 2 (Processing), 3 (Shipped)
+                // PI: 4
+                // History: 5 (Completed), 6 (Cancelled)
+
+                let statuses: number[] = [];
+                switch (activeTab) {
+                    case 'requested': statuses = [0]; break;
+                    case 'active': statuses = [1, 2, 3]; break;
+                    case 'pi': statuses = [4]; break;
+                    case 'history': statuses = [5, 6]; break;
+                    default: statuses = [1, 2, 3]; break;
+                }
+
+                console.log("Fetching orders for tab:", activeTab, "Statuses:", statuses);
+
+                const data = await fetchStorefrontOrders(authContext!.customer!.id, statuses)
                 // Sort by date desc
                 data.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 setOrders(data)
@@ -37,14 +57,7 @@ export default function StorefrontOrdersPage() {
             }
         }
         loadOrders()
-    }, [authContext, accessToken])
-
-
-    const filteredOrders = orders.filter(o =>
-        showHistory
-            ? COMPLETED_STATUSES.includes(o.status)
-            : !COMPLETED_STATUSES.includes(o.status)
-    )
+    }, [authContext, accessToken, activeTab])
 
     if (contextLoading) return null; // Let layout handle loading spinner
 
@@ -65,20 +78,37 @@ export default function StorefrontOrdersPage() {
                 <div className="space-y-6">
                     <div className="flex justify-end space-x-2">
                         <Button
-                            variant={!showHistory ? "default" : "outline"}
-                            onClick={() => setShowHistory(false)}
-                            className="rounded-full"
+                            variant={activeTab === 'requested' ? "default" : "outline"}
+                            onClick={() => setActiveTab('requested')}
+                            className="rounded-full relative"
                             size="sm"
                         >
-                            Active Orders
+                            Requested
+
                         </Button>
                         <Button
-                            variant={showHistory ? "default" : "outline"}
-                            onClick={() => setShowHistory(true)}
+                            variant={activeTab === 'active' ? "default" : "outline"}
+                            onClick={() => setActiveTab('active')}
                             className="rounded-full"
                             size="sm"
                         >
-                            Order History
+                            Active
+                        </Button>
+                        <Button
+                            variant={activeTab === 'pi' ? "default" : "outline"}
+                            onClick={() => setActiveTab('pi')}
+                            className="rounded-full"
+                            size="sm"
+                        >
+                            Pending Invoice
+                        </Button>
+                        <Button
+                            variant={activeTab === 'history' ? "default" : "outline"}
+                            onClick={() => setActiveTab('history')}
+                            className="rounded-full"
+                            size="sm"
+                        >
+                            History
                         </Button>
                     </div>
 
@@ -102,14 +132,14 @@ export default function StorefrontOrdersPage() {
                                                 Loading orders...
                                             </td>
                                         </tr>
-                                    ) : filteredOrders.length === 0 ? (
+                                    ) : orders.length === 0 ? (
                                         <tr>
                                             <td colSpan={6} className="px-6 py-12 text-center text-sm text-gray-500">
-                                                {showHistory ? "No past orders found." : "No active orders."}
+                                                {activeTab === 'history' ? "No past orders found." : "No orders found in this category."}
                                             </td>
                                         </tr>
                                     ) : (
-                                        filteredOrders.map((order) => {
+                                        orders.map((order) => {
                                             const status = STATUS_CONFIG[order.status] || { label: 'Unknown', variant: 'secondary' }
                                             return (
                                                 <tr key={order.id} className="hover:bg-gray-50 transition-colors">
