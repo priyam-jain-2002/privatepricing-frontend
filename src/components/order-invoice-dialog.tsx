@@ -20,8 +20,7 @@ export function PayOrderDialog({ order, open, onOpenChange }: PayOrderDialogProp
     // Final = finalAmount
 
     const baseAmount = Number(order.totalAmount || 0);
-    const cgstAmount = Number(order.totalCgstAmount || 0);
-    const sgstAmount = Number(order.totalSgstAmount || 0);
+    const gstAmount = Number(order.totalGstAmount || 0);
     const grandTotal = Number(order.finalAmount || 0);
 
     return (
@@ -89,8 +88,7 @@ export function PayOrderDialog({ order, open, onOpenChange }: PayOrderDialogProp
                                     <th className="px-4 py-3 text-left font-medium text-gray-700 w-[40%]">Item</th>
                                     <th className="px-4 py-3 text-right font-medium text-gray-700">Qty</th>
                                     <th className="px-4 py-3 text-right font-medium text-gray-700">Unit Price</th>
-                                    <th className="px-4 py-3 text-right font-medium text-gray-700">CGST</th>
-                                    <th className="px-4 py-3 text-right font-medium text-gray-700">SGST</th>
+                                    <th className="px-4 py-3 text-right font-medium text-gray-700">GST</th>
                                     <th className="px-4 py-3 text-right font-medium text-gray-700">Total</th>
                                 </tr>
                             </thead>
@@ -101,9 +99,8 @@ export function PayOrderDialog({ order, open, onOpenChange }: PayOrderDialogProp
                                     const unitPrice = Number(item.unitPriceAtTime);
                                     const qty = item.quantity;
                                     const lineBase = unitPrice * qty;
-                                    const lineCgst = Number(item.cgstAmountAtTime || 0);
-                                    const lineSgst = Number(item.sgstAmountAtTime || 0);
-                                    const lineTotal = lineBase + lineCgst + lineSgst;
+                                    const lineGst = Number(item.gstAmountAtTime || 0);
+                                    const lineTotal = lineBase + lineGst;
 
                                     return (
                                         <tr key={item.id}>
@@ -114,12 +111,8 @@ export function PayOrderDialog({ order, open, onOpenChange }: PayOrderDialogProp
                                             <td className="px-4 py-3 text-right">{qty}</td>
                                             <td className="px-4 py-3 text-right">{order.currency} {unitPrice.toFixed(2)}</td>
                                             <td className="px-4 py-3 text-right text-gray-600">
-                                                {order.currency} {lineCgst.toFixed(2)}
-                                                <div className="text-[10px] text-gray-400">({item.cgstRateAtTime}%)</div>
-                                            </td>
-                                            <td className="px-4 py-3 text-right text-gray-600">
-                                                {order.currency} {lineSgst.toFixed(2)}
-                                                <div className="text-[10px] text-gray-400">({item.sgstRateAtTime}%)</div>
+                                                {order.currency} {lineGst.toFixed(2)}
+                                                <div className="text-[10px] text-gray-400">({item.gstRateAtTime}%)</div>
                                             </td>
                                             <td className="px-4 py-3 text-right font-medium">{order.currency} {lineTotal.toFixed(2)}</td>
                                         </tr>
@@ -137,12 +130,8 @@ export function PayOrderDialog({ order, open, onOpenChange }: PayOrderDialogProp
                                 <span>{order.currency} {baseAmount.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-sm text-gray-600">
-                                <span>Total CGST</span>
-                                <span>{order.currency} {cgstAmount.toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between text-sm text-gray-600">
-                                <span>Total SGST</span>
-                                <span>{order.currency} {sgstAmount.toFixed(2)}</span>
+                                <span className="font-medium">Total GST</span>
+                                <span>{order.currency} {gstAmount.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-lg font-bold text-gray-900 border-t border-gray-200 pt-3 mt-1">
                                 <span>Purchase Order Total</span>
