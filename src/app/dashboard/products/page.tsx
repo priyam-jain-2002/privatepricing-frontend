@@ -1,9 +1,21 @@
 "use client"
 import { useStore } from "@/contexts/store-context"
 import { ProductsSection } from "@/components/owner-dashboard/products-section"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+import { toast } from "sonner"
 
 export default function ProductsPage() {
     const { activeStore } = useStore()
+    const router = useRouter()
+
+    useEffect(() => {
+        const role = localStorage.getItem('user_role')
+        if (role === '5') {
+            router.push('/dashboard/orders')
+            toast.error("Access denied")
+        }
+    }, [])
 
     if (!activeStore) return null
 
