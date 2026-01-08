@@ -2,8 +2,8 @@
 import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { History, Plus, Search, Filter, Pencil } from "lucide-react"
-import { fetchAllOrders, updateOrderStatus } from "@/lib/api"
+import { History, Plus, Search, Filter, Pencil, ArrowRight } from "lucide-react"
+import { fetchAllOrders, updateOrderStatus, fetchStoreStats } from "@/lib/api"
 import { PayOrderDialog } from "../order-invoice-dialog"
 import { analytics } from "@/lib/analytics"
 import { toast } from "sonner"
@@ -26,17 +26,7 @@ interface OrdersSectionProps {
     activeStore: any
 }
 
-const filterOptions = [
-    { id: 'all', label: 'All Orders' },
-    { id: 'active', label: 'Active', group: true }, // Logic: not completed/cancelled
-    { id: '0', label: 'Requested' },
-    { id: '1', label: 'Pending' },
-    { id: '2', label: 'Processing' },
-    { id: '3', label: 'Shipped' },
-    { id: '4', label: 'Pending Invoice' },
-    { id: '5', label: 'Completed' },
-    { id: '6', label: 'Cancelled' },
-]
+
 
 export function OrdersSection({ activeStore }: OrdersSectionProps) {
     const router = useRouter()
@@ -47,7 +37,8 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
     const [showCreateOrder, setShowCreateOrder] = useState(false)
     const [editingOrder, setEditingOrder] = useState<any>(null)
     const [searchQuery, setSearchQuery] = useState("")
-    const [activeFilter, setActiveFilter] = useState("active") // Default to Active
+    const [activeTab, setActiveTab] = useState<'active' | 'requested' | 'pending' | 'processing' | 'shipped' | 'pi' | 'history'>('active')
+    const [stats, setStats] = useState<{ requestedCount: number } | null>(null)
 
     // URL State
     const activeOrderId = searchParams.get('orderId')
@@ -60,12 +51,33 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
     useEffect(() => {
         if (activeStore) {
             loadOrders()
+            loadStats()
         }
-    }, [activeStore])
+    }, [activeStore, activeTab]) // Reload when tab changes
+
+    const loadStats = async () => {
+        try {
+            const data = await fetchStoreStats(activeStore.id)
+            setStats(data)
+        } catch (err) {
+            console.error("Failed to fetch stats", err)
+        }
+    }
 
     const loadOrders = async () => {
         try {
-            const data = await fetchAllOrders(activeStore.id)
+            let statuses: number[] = [];
+            switch (activeTab) {
+                case 'active': statuses = [1, 2, 3, 4]; break;
+                case 'requested': statuses = [0]; break;
+                case 'pending': statuses = [1]; break;
+                case 'processing': statuses = [2]; break;
+                case 'shipped': statuses = [3]; break;
+                case 'pi': statuses = [4]; break;
+                case 'history': statuses = [5, 6]; break;
+                default: statuses = [1, 2, 3, 4]; break;
+            }
+            const data = await fetchAllOrders(activeStore.id, statuses)
             setOrders(data)
         } catch (err) {
             console.error("Failed to fetch orders", err)
@@ -83,6 +95,7 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
     }
 
     // Filter Logic
+    // Filter Logic (Search only, status is server-side)
     const filteredOrders = useMemo(() => {
         return orders.filter(order => {
             // 1. Search Filter
@@ -93,16 +106,9 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                 (order.customerPoNumber || "").toLowerCase().includes(query) ||
                 (order.finalAmount?.toString() || "").includes(query);
 
-            if (!matchesSearch) return false;
-
-            // 2. Status Filter
-            if (activeFilter === 'all') return true;
-            if (activeFilter === 'active') {
-                return order.status !== 5 && order.status !== 6;
-            }
-            return Number(order.status) === parseInt(activeFilter);
+            return matchesSearch;
         }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }, [orders, searchQuery, activeFilter]);
+    }, [orders, searchQuery]);
 
 
     return (
@@ -137,21 +143,103 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                 {/* Filter Pills (Production Grade) */}
                 <div className="pb-4">
                     <div className="flex flex-wrap gap-2 items-center">
-                        {filterOptions.map((filter) => (
-                            <button
-                                key={filter.id}
-                                onClick={() => setActiveFilter(filter.id)}
-                                className={`
-                                    relative inline-flex items-center justify-center px-4 py-1.5 text-sm font-medium transition-all duration-200 ease-in-out rounded-full border
-                                    ${activeFilter === filter.id
-                                        ? "bg-primary border-primary text-primary-foreground shadow-md active:scale-95"
-                                        : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 active:scale-95"
-                                    }
-                                `}
-                            >
-                                {filter.label}
-                            </button>
-                        ))}
+                        {/* Requested (With Red Dot) */}
+                        <button
+                            onClick={() => setActiveTab('requested')}
+                            className={`
+                                relative inline-flex items-center justify-center px-4 py-1.5 text-sm font-medium transition-all duration-200 ease-in-out rounded-full border
+                                ${activeTab === 'requested'
+                                    ? "bg-primary border-primary text-primary-foreground shadow-md active:scale-95"
+                                    : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 active:scale-95"
+                                }
+                            `}
+                        >
+                            Requested
+                            {stats && stats.requestedCount > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                </span>
+                            )}
+                        </button>
+
+                        {/* Active (Default) */}
+                        <button
+                            onClick={() => setActiveTab('active')}
+                            className={`
+                                relative inline-flex items-center justify-center px-4 py-1.5 text-sm font-medium transition-all duration-200 ease-in-out rounded-full border
+                                ${activeTab === 'active'
+                                    ? "bg-primary border-primary text-primary-foreground shadow-md active:scale-95"
+                                    : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 active:scale-95"
+                                }
+                            `}
+                        >
+                            Active
+                        </button>
+
+                        {/* Granular Statuses */}
+                        <button
+                            onClick={() => setActiveTab('pending')}
+                            className={`
+                                relative inline-flex items-center justify-center px-4 py-1.5 text-sm font-medium transition-all duration-200 ease-in-out rounded-full border
+                                ${activeTab === 'pending'
+                                    ? "bg-primary border-primary text-primary-foreground shadow-md active:scale-95"
+                                    : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 active:scale-95"
+                                }
+                            `}
+                        >
+                            Pending
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('processing')}
+                            className={`
+                                relative inline-flex items-center justify-center px-4 py-1.5 text-sm font-medium transition-all duration-200 ease-in-out rounded-full border
+                                ${activeTab === 'processing'
+                                    ? "bg-primary border-primary text-primary-foreground shadow-md active:scale-95"
+                                    : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 active:scale-95"
+                                }
+                            `}
+                        >
+                            Processing
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('shipped')}
+                            className={`
+                                relative inline-flex items-center justify-center px-4 py-1.5 text-sm font-medium transition-all duration-200 ease-in-out rounded-full border
+                                ${activeTab === 'shipped'
+                                    ? "bg-primary border-primary text-primary-foreground shadow-md active:scale-95"
+                                    : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 active:scale-95"
+                                }
+                            `}
+                        >
+                            Shipped
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('pi')}
+                            className={`
+                                relative inline-flex items-center justify-center px-4 py-1.5 text-sm font-medium transition-all duration-200 ease-in-out rounded-full border
+                                ${activeTab === 'pi'
+                                    ? "bg-primary border-primary text-primary-foreground shadow-md active:scale-95"
+                                    : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 active:scale-95"
+                                }
+                            `}
+                        >
+                            Pending Invoice
+                        </button>
+
+                        {/* History */}
+                        <button
+                            onClick={() => setActiveTab('history')}
+                            className={`
+                                relative inline-flex items-center justify-center px-4 py-1.5 text-sm font-medium transition-all duration-200 ease-in-out rounded-full border
+                                ${activeTab === 'history'
+                                    ? "bg-primary border-primary text-primary-foreground shadow-md active:scale-95"
+                                    : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 active:scale-95"
+                                }
+                            `}
+                        >
+                            History
+                        </button>
                     </div>
                 </div>
             </div>
@@ -195,7 +283,7 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                                                 onValueChange={async (value) => {
                                                     try {
                                                         const statusInt = parseInt(value)
-                                                        if (!window.confirm("Are you sure you want to update this order status?")) return;
+                                                        // if (!window.confirm("Are you sure you want to update this order status?")) return;
 
                                                         await updateOrderStatus(activeStore.id, order.id, statusInt);
 
@@ -244,6 +332,56 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                                                     ))}
                                                 </SelectContent>
                                             </Select>
+
+                                            {/* One-Click Next Status Button */}
+                                            {(() => {
+                                                const getNextStatus = (current: any) => {
+                                                    const statusInt = parseInt(current);
+                                                    switch (statusInt) {
+                                                        case 0: return 1; // Requested -> Pending
+                                                        case 1: return 2; // Pending -> Processing
+                                                        case 2: return 3; // Processing -> Shipped
+                                                        case 3: return 4; // Shipped -> PI
+                                                        case 4: return 5; // PI -> Completed
+                                                        default: return null;
+                                                    }
+                                                }
+                                                // Force parse to ensure we don't have string/number mismatch
+                                                const statusInt = parseInt(order.status);
+                                                const nextStatus = getNextStatus(statusInt);
+                                                if (nextStatus !== null) {
+                                                    return (
+                                                        <Button
+                                                            size="icon"
+                                                            variant="outline"
+                                                            className="h-8 w-8 text-primary border-primary/20 hover:bg-primary/5 hover:text-primary"
+                                                            title={`Move to ${STATUS_CONFIG[nextStatus]?.label}`}
+                                                            onClick={async (e) => {
+                                                                e.stopPropagation();
+                                                                try {
+                                                                    await updateOrderStatus(activeStore.id, order.id, nextStatus);
+                                                                    await loadOrders();
+                                                                    if (activeTab === 'requested') loadStats(); // Refresh red dot if moving from requested
+                                                                    toast.success(`Order moved to ${STATUS_CONFIG[nextStatus]?.label}`);
+
+                                                                    // Analytics
+                                                                    analytics.capture('order_status_updated', {
+                                                                        orderId: order.id,
+                                                                        oldStatus: order.status,
+                                                                        newStatus: nextStatus,
+                                                                        method: 'one_click'
+                                                                    });
+                                                                } catch (err: any) {
+                                                                    toast.error(err.message);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <ArrowRight className="h-4 w-4" />
+                                                        </Button>
+                                                    )
+                                                }
+                                                return null;
+                                            })()}
 
                                             <Button
                                                 variant="ghost"
