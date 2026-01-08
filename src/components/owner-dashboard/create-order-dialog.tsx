@@ -24,7 +24,7 @@ import { toast } from "sonner"
 import {
     fetchCustomers,
     fetchBranches,
-    getCustomerPricings,
+    getCustomerPricingsView,
     fetchProducts,
     updateTeamOrder,
 } from "@/lib/api"
@@ -194,7 +194,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
         try {
             const [branchesData, pricingsData, productsData] = await Promise.all([
                 fetchBranches(customerId).catch(() => []),
-                getCustomerPricings(activeStore.id, customerId).catch(() => []),
+                getCustomerPricingsView(activeStore.id, customerId).catch(() => []),
                 fetchProducts().catch(() => [])
             ])
             setBranches(Array.isArray(branchesData) ? branchesData : [])
