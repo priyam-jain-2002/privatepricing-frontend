@@ -16,8 +16,7 @@ interface ProductRowProps {
 export function ProductRow({ product, onUpdate, onEditDetails, operationCostPercentage }: ProductRowProps) {
     const [basePrice, setBasePrice] = useState(product.basePrice || '')
     const [baseFreight, setBaseFreight] = useState(product.baseFreight || '')
-    const [cgst, setCgst] = useState(product.cgst || '')
-    const [sgst, setSgst] = useState(product.sgst || '')
+    const [gst, setGst] = useState(product.gst || '')
     const [hsnCode, setHsnCode] = useState(product.hsnCode || '')
     const [isEditing, setIsEditing] = useState(false)
 
@@ -32,8 +31,7 @@ export function ProductRow({ product, onUpdate, onEditDetails, operationCostPerc
                 basePrice: basePriceNum,
                 baseFreight: baseFreightNum,
                 costPrice: parseFloat(calculatedCostPrice.toFixed(2)),
-                cgst: parseFloat(cgst || '0'),
-                sgst: parseFloat(sgst || '0'),
+                gst: parseFloat(gst || '0'),
             })
             setIsEditing(false)
             onUpdate()
@@ -97,27 +95,13 @@ export function ProductRow({ product, onUpdate, onEditDetails, operationCostPerc
                 {isEditing ? (
                     <Input
                         type="number"
-                        value={cgst}
-                        onChange={(e) => setCgst(e.target.value)}
+                        value={gst}
+                        onChange={(e) => setGst(e.target.value)}
                         className="h-8 w-16 px-2"
                     />
                 ) : (
                     <span onClick={() => setIsEditing(true)} className="cursor-pointer hover:underline decoration-dashed decoration-gray-400">
-                        {product.cgst || 0}%
-                    </span>
-                )}
-            </td>
-            <td className="px-6 py-4 text-sm text-gray-600">
-                {isEditing ? (
-                    <Input
-                        type="number"
-                        value={sgst}
-                        onChange={(e) => setSgst(e.target.value)}
-                        className="h-8 w-16 px-2"
-                    />
-                ) : (
-                    <span onClick={() => setIsEditing(true)} className="cursor-pointer hover:underline decoration-dashed decoration-gray-400">
-                        {product.sgst || 0}%
+                        {product.gst || 0}%
                     </span>
                 )}
             </td>

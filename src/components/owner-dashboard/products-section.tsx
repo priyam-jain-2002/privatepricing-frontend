@@ -60,8 +60,7 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
                 basePrice: basePriceNum,
                 baseFreight: baseFreightNum,
                 costPrice: parseFloat(calculatedCostPrice.toFixed(2)),
-                cgst: parseFloat(formData.get('cgst') as string || '0'),
-                sgst: parseFloat(formData.get('sgst') as string || '0'),
+                gst: parseFloat(formData.get('gst') as string || '0'),
                 currency: 'INR'
             });
             await loadProducts();
@@ -166,12 +165,8 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">CGST (%)</label>
-                                <Input name="cgst" type="number" step="0.01" min="0" defaultValue="0" />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">SGST (%)</label>
-                                <Input name="sgst" type="number" step="0.01" min="0" defaultValue="0" />
+                                <label className="text-sm font-medium">GST (%)</label>
+                                <Input name="gst" type="number" step="0.01" min="0" defaultValue="18" />
                             </div>
                         </div>
                         <div className="flex justify-end gap-2">
@@ -180,7 +175,7 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
                         </div>
                     </form>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
 
             <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
                 <DialogContent className="max-w-lg w-full">
@@ -234,8 +229,7 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
                                         </Tooltip>
                                     </TooltipProvider>
                                 </th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">CGST %</th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">SGST %</th>
+                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">GST %</th>
                                 <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
                             </tr>
                         </thead>
@@ -256,6 +250,6 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
                 </div>
             </Card>
             <p className="text-sm text-gray-500 italic mt-2">* Cost Price includes operations cost</p>
-        </div>
+        </div >
     )
 }

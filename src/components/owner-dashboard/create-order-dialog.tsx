@@ -304,10 +304,8 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
                 const lineTotal = finalPrice * item.quantity
 
                 // Tax Calculation (Exclusive)
-                const cgst = Number(product.cgst) || 9
-                const sgst = Number(product.sgst) || 9
-                const taxRate = cgst + sgst
-                const taxAmount = lineTotal * (taxRate / 100)
+                const gstRate = Number(product.gst) || 18
+                const taxAmount = lineTotal * (gstRate / 100)
 
                 subtotal += lineTotal
                 tax += taxAmount
@@ -670,9 +668,8 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
                                         const lineTotal = currentPrice * item.quantity
 
                                         // Calculate Item Tax
-                                        const cgst = Number(product.cgst) || 9
-                                        const sgst = Number(product.sgst) || 9
-                                        const itemTax = lineTotal * ((cgst + sgst) / 100)
+                                        const gstRate = Number(product.gst) || 18
+                                        const itemTax = lineTotal * (gstRate / 100)
 
                                         return (
                                             <div key={item.productId} className="flex flex-col gap-3 text-base bg-gray-50 p-4 rounded-lg border border-transparent hover:border-gray-200 transition-colors">
@@ -680,7 +677,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
                                                     <div className="flex-1 pr-3">
                                                         <div className="font-medium text-gray-900 line-clamp-2">{product.name}</div>
                                                         <div className="text-xs text-gray-500 mt-1">
-                                                            + GST: {product.currency} {itemTax.toFixed(2)}
+                                                            + GST ({gstRate}%): {product.currency} {itemTax.toFixed(2)}
                                                         </div>
                                                     </div>
 

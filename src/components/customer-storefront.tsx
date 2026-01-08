@@ -245,29 +245,22 @@ export function CustomerStorefront() {
   // Calculate Totals including GST
   const calculateTotals = () => {
     let baseTotal = 0;
-    let cgstTotal = 0;
-    let sgstTotal = 0;
+    let gstTotal = 0;
 
     orderItems.forEach(item => {
-      // Assuming product has cgst/sgst defaults if not provided? 
-      // For now we'll assume 9% default if the API didn't return them (it should have if we mapped it, wait we didn't map them in fetchProducts)
-      // Let's assume standard 9% for now as a fallback or if invalid.
-      // Ideally we update fetchProducts to return cgst/sgst.
-      // Since I can't easily update the backend return type in 1 go without checking types, I'll default to 9%.
-      const cgstRate = 9.00;
-      const sgstRate = 9.00;
+      // Assuming product has gst defaults if not provided? 
+      const gstRate = 18.00;
 
       const itemBase = item.price * item.quantity;
       baseTotal += itemBase;
 
-      cgstTotal += (itemBase * cgstRate) / 100;
-      sgstTotal += (itemBase * sgstRate) / 100;
+      gstTotal += (itemBase * gstRate) / 100;
     });
 
-    return { baseTotal, cgstTotal, sgstTotal, finalTotal: baseTotal + cgstTotal + sgstTotal };
+    return { baseTotal, gstTotal, finalTotal: baseTotal + gstTotal };
   }
 
-  const { baseTotal, cgstTotal, sgstTotal, finalTotal } = calculateTotals();
+  const { baseTotal, gstTotal, finalTotal } = calculateTotals();
   const orderCurrency = orderItems[0]?.currency || 'INR'
 
   const getBranchAddress = (branchId: string) => {
@@ -796,12 +789,8 @@ export function CustomerStorefront() {
                       <span className="text-gray-900">{orderCurrency} {baseTotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm text-gray-500">
-                      <span>CGST (9%)</span>
-                      <span>{orderCurrency} {cgstTotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm text-gray-500">
-                      <span>SGST (9%)</span>
-                      <span>{orderCurrency} {sgstTotal.toFixed(2)}</span>
+                      <span>GST (18%)</span>
+                      <span>{orderCurrency} {gstTotal.toFixed(2)}</span>
                     </div>
                   </div>
 

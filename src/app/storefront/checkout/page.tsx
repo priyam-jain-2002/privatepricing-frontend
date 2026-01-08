@@ -56,23 +56,20 @@ export default function StorefrontCheckoutPage() {
     // Calculate Totals
     const calculateTotals = () => {
         let baseTotal = 0;
-        let cgstTotal = 0;
-        let sgstTotal = 0;
+        let gstTotal = 0;
 
-        const cgstRate = 9.00;
-        const sgstRate = 9.00;
+        const gstRate = 18.00; // Default if not provided
 
         orderItems.forEach(item => {
             const itemBase = item.price * item.quantity;
             baseTotal += itemBase;
-            cgstTotal += (itemBase * cgstRate) / 100;
-            sgstTotal += (itemBase * sgstRate) / 100;
+            gstTotal += (itemBase * gstRate) / 100;
         });
 
-        return { baseTotal, cgstTotal, sgstTotal, finalTotal: baseTotal + cgstTotal + sgstTotal };
+        return { baseTotal, gstTotal, finalTotal: baseTotal + gstTotal };
     }
 
-    const { baseTotal, cgstTotal, sgstTotal, finalTotal } = calculateTotals();
+    const { baseTotal, gstTotal, finalTotal } = calculateTotals();
     const orderCurrency = orderItems[0]?.currency || 'INR'
 
     const confirmOrder = async () => {
@@ -322,12 +319,8 @@ export default function StorefrontCheckoutPage() {
                                         <span>{formatCurrency(baseTotal, orderCurrency)}</span>
                                     </div>
                                     <div className="flex justify-between text-sm text-gray-500">
-                                        <span>CGST (9%)</span>
-                                        <span>{formatCurrency(cgstTotal, orderCurrency)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm text-gray-500">
-                                        <span>SGST (9%)</span>
-                                        <span>{formatCurrency(sgstTotal, orderCurrency)}</span>
+                                        <span>GST (18%)</span>
+                                        <span>{formatCurrency(gstTotal, orderCurrency)}</span>
                                     </div>
                                 </div>
 
