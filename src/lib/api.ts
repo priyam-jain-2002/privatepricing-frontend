@@ -430,6 +430,10 @@ export async function getCustomerPricings(storeId: string, customerId: string) {
     return fetchAPI(`/stores/${storeId}/customers/${customerId}/pricing`, { headers: getAuthHeaders() });
 }
 
+export async function getCustomerPricingsView(storeId: string, customerId: string) {
+    return fetchAPI(`/stores/${storeId}/customers/${customerId}/pricing/view`, { headers: getAuthHeaders() });
+}
+
 export async function createCustomerPricing(storeId: string, customerId: string, data: any) {
     return fetchAPI(`/stores/${storeId}/customers/${customerId}/pricing`, {
         method: 'POST',

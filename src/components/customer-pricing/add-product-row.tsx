@@ -8,8 +8,7 @@ import { cn } from "@/lib/utils"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
+import { SmartDatePicker } from "@/components/ui/smart-date-picker"
 
 interface AddProductRowProps {
     product: any
@@ -53,33 +52,12 @@ export function AddProductRow({ product, onAssign, isAdding, returnUrl }: AddPro
                 </div>
             </td>
             <td className="px-4 py-3">
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                            variant={"outline"}
-                            className={cn(
-                                "w-full pl-3 text-left font-normal h-8 text-xs",
-                                !validUntil && "text-muted-foreground"
-                            )}
-                        >
-                            {validUntil ? (
-                                format(validUntil, "PPP")
-                            ) : (
-                                <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                            mode="single"
-                            selected={validUntil}
-                            onSelect={setValidUntil}
-                            disabled={(date) => date < new Date()}
-                            initialFocus
-                        />
-                    </PopoverContent>
-                </Popover>
+                <SmartDatePicker
+                    date={validUntil}
+                    onDateChange={setValidUntil}
+                    disabled={false}
+                    placeholder="Pick a date"
+                />
             </td>
             <td className="px-4 py-3 text-right">
                 <Button

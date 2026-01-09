@@ -9,8 +9,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { SmartDatePicker } from "@/components/ui/smart-date-picker"
 import {
     Select,
     SelectContent,
@@ -28,9 +27,10 @@ interface PricingRowProps {
     savingId: string | null
     freightRate?: number
     returnUrl: string | null
+    userRole: string | null
 }
 
-export function PricingRow({ product, initialPricing, onSave, savingId, freightRate, returnUrl }: PricingRowProps) {
+export function PricingRow({ product, initialPricing, onSave, savingId, freightRate, returnUrl, userRole }: PricingRowProps) {
     if (!product) return null // Safety check
     const router = useRouter()
 
@@ -55,9 +55,9 @@ export function PricingRow({ product, initialPricing, onSave, savingId, freightR
             setSellingPrice(initialPricing.sellingPrice)
         } else if (initialPricing?.pricingType === 'profit_margin' && initialPricing?.profitMarginPercent) {
             // Fallback for legacy records: calculate dynamically for display
-            const baseCost = parseFloat(product.basePrice) || 0;
+            const baseCost = parseFloat(product.costPrice) || 0;
             // Ensure product object has it.
-            const effectiveCost = parseFloat(product.costPrice || product.basePrice || '0') * (1 + (freightRate || 0) / 100);
+            const effectiveCost = parseFloat(product.costPrice || '0') * (1 + (freightRate || 0) / 100);
 
             const margin = parseFloat(initialPricing.profitMarginPercent);
             if (!isNaN(effectiveCost) && !isNaN(margin)) {
@@ -115,7 +115,7 @@ export function PricingRow({ product, initialPricing, onSave, savingId, freightR
             return;
         }
         const margin = parseFloat(value);
-        const baseCost = parseFloat(product.costPrice || product.basePrice || '0');
+        const baseCost = parseFloat(product.costPrice) || 0;
         // Effective Cost includes freight
         const effectiveCost = baseCost * (1 + (freightRate || 0) / 100);
 
@@ -160,43 +160,51 @@ export function PricingRow({ product, initialPricing, onSave, savingId, freightR
                     </div>
                 </div>
             </td>
-            <td className="px-6 py-4 text-sm text-gray-600">
-                <div className="flex flex-col">
-                    <span>₹ {(!!freightRate ? (parseFloat(product.basePrice || product.costPrice || 0) * (1 + freightRate / 100)).toFixed(2) : (product.basePrice || product.costPrice || 0))}</span>
-                    {!!freightRate && (
-                        <span className="text-[10px] text-emerald-600 font-medium">
-                            (incl. {freightRate}% Delivery)
-                        </span>
-                    )}
-                </div>
-            </td>
-            <td className="px-6 py-4 text-sm">
-                <Select
-                    value={pricingType}
-                    onValueChange={(value) => handleChange(setPricingType, value)}
-                >
-                    <SelectTrigger className="w-32 h-8 text-xs">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="fixed">Fixed Override</SelectItem>
-                        <SelectItem value="profit_margin">Profit Margin %</SelectItem>
-                    </SelectContent>
-                </Select>
-            </td>
+            {userRole !== '5' && (
+                <>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                        <div className="flex flex-col">
+                            <span>₹ {(!!freightRate ? (parseFloat(product.costPrice || 0) * (1 + freightRate / 100)).toFixed(2) : (product.costPrice || 0))}</span>
+                            {!!freightRate && (
+                                <span className="text-[10px] text-emerald-600 font-medium">
+                                    (incl. {freightRate}% Delivery)
+                                </span>
+                            )}
+                        </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                        <Select
+                            value={pricingType}
+                            onValueChange={(value) => handleChange(setPricingType, value)}
+                        >
+                            <SelectTrigger className="w-32 h-8 text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="fixed">Fixed Override</SelectItem>
+                                <SelectItem value="profit_margin">Profit Margin %</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </td>
+                </>
+            )}
             <td className="px-6 py-4">
                 <div className="flex items-center gap-2">
                     {pricingType === 'profit_margin' ? (
                         <>
-                            <Input
-                                type="number"
-                                className="h-8 w-16 text-xs text-right"
-                                placeholder="%"
-                                value={profitMarginPercent}
-                                onChange={(e) => handleMarginChange(e.target.value)}
-                            />
-                            <span className="text-xs text-gray-500">%</span>
-                            <span className="text-gray-400 text-xs mx-1">→</span>
+                            {userRole !== '5' && (
+                                <>
+                                    <Input
+                                        type="number"
+                                        className="h-8 w-16 text-xs text-right"
+                                        placeholder="%"
+                                        value={profitMarginPercent}
+                                        onChange={(e) => handleMarginChange(e.target.value)}
+                                    />
+                                    <span className="text-xs text-gray-500">%</span>
+                                    <span className="text-gray-400 text-xs mx-1">→</span>
+                                </>
+                            )}
                             <div className="flex flex-col items-end leading-none">
                                 <span className="text-sm font-medium text-gray-900">
                                     ₹ {sellingPrice}
@@ -206,91 +214,79 @@ export function PricingRow({ product, initialPricing, onSave, savingId, freightR
                         </>
                     ) : (
                         <>
-                            <span className="text-gray-400 text-xs">₹</span>
-                            <Input
-                                type="number"
-                                className="h-8 w-24 text-right"
-                                placeholder={(product.basePrice || 0).toString()}
-                                value={sellingPrice}
-                                onChange={(e) => handleChange(setSellingPrice, e.target.value)}
-                            />
+                            {userRole !== '5' ? (
+                                <>
+                                    <span className="text-gray-400 text-xs">₹</span>
+                                    <Input
+                                        type="number"
+                                        className="h-8 w-24 text-right"
+                                        placeholder={(product.costPrice || 0).toString()}
+                                        value={sellingPrice}
+                                        onChange={(e) => handleChange(setSellingPrice, e.target.value)}
+                                    />
+                                </>
+                            ) : (
+                                <span className="text-sm font-medium text-gray-900">
+                                    ₹ {sellingPrice}
+                                </span>
+                            )}
                         </>
                     )}
                 </div>
             </td>
             <td className="px-6 py-4 text-sm text-gray-600">
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                            variant={"outline"}
-                            className={cn(
-                                "w-[140px] pl-3 text-left font-normal h-8 text-xs",
-                                !effectiveTo && "text-muted-foreground"
-                            )}
+                <SmartDatePicker
+                    date={effectiveTo}
+                    onDateChange={value => handleChange(setEffectiveTo, value)}
+                    disabled={userRole === '5' || (effectiveTo !== undefined && effectiveTo < new Date("1900-01-01"))}
+                />
+            </td>
+            {userRole !== '5' && (
+                <>
+                    <td className="px-6 py-4 text-center">
+                        <button
+                            onClick={() => handleChange(setVisible, !visible)}
+                            className={`inline-flex h-6 w-11 items-center rounded-full transition-colors ${visible ? "bg-blue-600" : "bg-gray-300"}`}
                         >
-                            {effectiveTo ? (
-                                format(effectiveTo, "PPP")
-                            ) : (
-                                <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                            mode="single"
-                            selected={effectiveTo}
-                            onSelect={(date) => handleChange(setEffectiveTo, date)}
-                            disabled={(date) =>
-                                date < new Date("1900-01-01")
-                            }
-                            initialFocus
-                        />
-                    </PopoverContent>
-                </Popover>
-            </td>
-            <td className="px-6 py-4 text-center">
-                <button
-                    onClick={() => handleChange(setVisible, !visible)}
-                    className={`inline-flex h-6 w-11 items-center rounded-full transition-colors ${visible ? "bg-blue-600" : "bg-gray-300"}`}
-                >
-                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${visible ? "translate-x-5" : "translate-x-0.5"}`} />
-                </button>
-            </td>
-            <td className="px-6 py-4 text-right min-w-[100px]">
-                {isSaving ? (
-                    <Button disabled size="sm" variant="ghost" className="text-blue-600">
-                        <Loader2 className="h-4 w-4 animate-spin mr-1" /> Saving
-                    </Button>
-                ) : isDirty ? (
-                    <>
-                        <Button onClick={handleSaveAttempt} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white h-7 text-xs">
-                            <Save className="h-3 w-3 mr-1" /> Save
-                        </Button>
-                        <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Update Active Price?</DialogTitle>
-                                    <DialogDescription>
-                                        This pricing is valid until <strong>{initialPricing?.effectiveTo ? new Date(initialPricing.effectiveTo).toLocaleDateString() : ''}</strong>.
-                                        Changing it now might affect agreements. Are you sure?
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <DialogFooter>
-                                    <Button variant="outline" onClick={() => setShowConfirm(false)}>Cancel</Button>
-                                    <Button onClick={proceedWithSave}>Confirm Update</Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-                    </>
-                ) : initialPricing ? (
-                    <span className="text-xs text-green-600 flex items-center justify-end gap-1 px-3 py-2">
-                        <Check className="h-3 w-3" /> Saved
-                    </span>
-                ) : (
-                    <span className="text-xs text-gray-400 px-3 py-2">No changes</span>
-                )}
-            </td>
+                            <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${visible ? "translate-x-5" : "translate-x-0.5"}`} />
+                        </button>
+                    </td>
+                    <td className="px-6 py-4 text-right min-w-[100px]">
+                        {isSaving ? (
+                            <Button disabled size="sm" variant="ghost" className="text-blue-600">
+                                <Loader2 className="h-4 w-4 animate-spin mr-1" /> Saving
+                            </Button>
+                        ) : isDirty ? (
+                            <>
+                                <Button onClick={handleSaveAttempt} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white h-7 text-xs">
+                                    <Save className="h-3 w-3 mr-1" /> Save
+                                </Button>
+                                <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Update Active Price?</DialogTitle>
+                                            <DialogDescription>
+                                                This pricing is valid until <strong>{initialPricing?.effectiveTo ? new Date(initialPricing.effectiveTo).toLocaleDateString() : ''}</strong>.
+                                                Changing it now might affect agreements. Are you sure?
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <DialogFooter>
+                                            <Button variant="outline" onClick={() => setShowConfirm(false)}>Cancel</Button>
+                                            <Button onClick={proceedWithSave}>Confirm Update</Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
+                            </>
+                        ) : initialPricing ? (
+                            <span className="text-xs text-green-600 flex items-center justify-end gap-1 px-3 py-2">
+                                <Check className="h-3 w-3" /> Saved
+                            </span>
+                        ) : (
+                            <span className="text-xs text-gray-400 px-3 py-2">No changes</span>
+                        )}
+                    </td>
+                </>
+            )}
         </tr>
     )
 }

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { useState, useEffect } from "react"
-import { fetchProducts, getCustomerPricings, createCustomerPricing, updateCustomerPricing, fetchCustomer } from "@/lib/api"
+import { fetchProducts, getCustomerPricings, getCustomerPricingsView, createCustomerPricing, updateCustomerPricing, fetchCustomer } from "@/lib/api"
 import { analytics } from "@/lib/analytics"
 import { logger } from "@/lib/logger"
 import { Loader2, Save, Check, Plus, Search, Calendar as CalendarIcon } from "lucide-react"
@@ -38,8 +38,10 @@ export function CustomerPricingManagement({ storeId, customerId, customer, opera
   const [addingId, setAddingId] = useState<string | null>(null)
 
   const [listSearchQuery, setListSearchQuery] = useState("")
+  const [userRole, setUserRole] = useState<string | null>(null)
 
   useEffect(() => {
+    setUserRole(localStorage.getItem('user_role'))
     loadCustomerData()
     analytics.capture('customer_pricing_viewed', {
       customerId,
@@ -50,9 +52,16 @@ export function CustomerPricingManagement({ storeId, customerId, customer, opera
   // Load ONLY customer-specific pricing records (assigned products)
   async function loadCustomerData() {
     setLoading(true)
+    const role = localStorage.getItem('user_role');
+    console.log("Loading pricing for role:", role); // Debug log
+
     try {
+      const pricingPromise = role === '5'
+        ? getCustomerPricingsView(storeId, customerId)
+        : getCustomerPricings(storeId, customerId);
+
       const [pricingData, fetchedCustomer] = await Promise.all([
-        getCustomerPricings(storeId, customerId),
+        pricingPromise,
         !currentCustomer ? fetchCustomer(customerId) : Promise.resolve(null)
       ]);
 
@@ -175,9 +184,11 @@ export function CustomerPricingManagement({ storeId, customerId, customer, opera
           <Button onClick={loadCustomerData} variant="outline" size="icon">
             <Loader2 className="h-4 w-4" />
           </Button>
-          <Button onClick={openAddDialog} size="sm">
-            <Plus className="h-4 w-4 mr-2" /> Add Product
-          </Button>
+          {userRole !== '5' && (
+            <Button onClick={openAddDialog} size="sm">
+              <Plus className="h-4 w-4 mr-2" /> Add Product
+            </Button>
+          )}
         </div>
       </div>
 
@@ -187,17 +198,25 @@ export function CustomerPricingManagement({ storeId, customerId, customer, opera
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Product</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Cost Price (incl. Freight %)</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Strategy</th>
+                {userRole !== '5' && (
+                  <>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Cost Price (incl. Freight %)</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Strategy</th>
+                  </>
+                )}
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Selling Price</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Valid Until</th>
-                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">Visible</th>
-                <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
+                {userRole !== '5' && (
+                  <>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">Visible</th>
+                    <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
               {filteredPricing.length === 0 ? (
-                <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-500">No products match your search.</td></tr>
+                <tr><td colSpan={userRole === '5' ? 3 : 7} className="px-6 py-12 text-center text-gray-500">No products match your search.</td></tr>
               ) : filteredPricing.map((pricing) => (
                 <PricingRow
                   key={pricing.id}
@@ -207,6 +226,7 @@ export function CustomerPricingManagement({ storeId, customerId, customer, opera
                   savingId={savingId}
                   freightRate={currentCustomer?.inclusiveFreightRate ? parseFloat(currentCustomer.inclusiveFreightRate) : 0}
                   returnUrl={pathname}
+                  userRole={userRole}
                 />
               ))}
             </tbody>
