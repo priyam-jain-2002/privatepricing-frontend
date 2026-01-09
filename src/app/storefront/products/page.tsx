@@ -79,7 +79,15 @@ export default function StorefrontProductsPage() {
                             <Card key={product.id} className="group overflow-hidden border-border bg-card transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 flex flex-col h-full rounded-xl">
                                 {/* Image Placeholder */}
                                 <div className="aspect-[4/3] bg-secondary/30 relative overflow-hidden flex items-center justify-center group-hover:bg-secondary/50 transition-colors">
-                                    <Package className="h-10 w-10 text-muted-foreground/40 group-hover:text-primary/40 transition-colors duration-500" />
+                                    {product.images && product.images.length > 0 ? (
+                                        <img
+                                            src={product.images[0]}
+                                            alt={product.name}
+                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                        />
+                                    ) : (
+                                        <Package className="h-10 w-10 text-muted-foreground/40 group-hover:text-primary/40 transition-colors duration-500" />
+                                    )}
                                     {product.minimumQuantity && product.minimumQuantity > 1 && (
                                         <Badge variant="outline" className="absolute top-4 left-4 bg-background/80 backdrop-blur-sm text-xs font-normal border-border/60">
                                             Min Qty: {product.minimumQuantity}
@@ -89,17 +97,34 @@ export default function StorefrontProductsPage() {
 
                                 <CardContent className="p-6 flex-1 flex flex-col">
                                     <div className="flex-1 mb-6">
-                                        {product.productSku && (
-                                            <p className="text-[10px] font-semibold text-muted-foreground mb-2 tracking-widest uppercase">
-                                                {product.productSku}
-                                            </p>
-                                        )}
+                                        <div className="flex items-center gap-2 mb-2">
+                                            {product.productSku && (
+                                                <p className="text-[10px] font-semibold text-muted-foreground tracking-widest uppercase">
+                                                    {product.productSku}
+                                                </p>
+                                            )}
+                                            {product.hsnCode && (
+                                                <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4 font-normal text-muted-foreground bg-muted/50 border-border/50">
+                                                    HSN: {product.hsnCode}
+                                                </Badge>
+                                            )}
+                                        </div>
                                         <h3 className="font-medium text-lg text-foreground line-clamp-2 leading-snug group-hover:text-primary transition-colors mb-2">
                                             {product.name}
                                         </h3>
-                                        <p className="text-sm text-muted-foreground/80 line-clamp-2 leading-relaxed">
+                                        <p className="text-sm text-muted-foreground/80 line-clamp-2 leading-relaxed mb-4">
                                             {product.description || "Premium quality product."}
                                         </p>
+                                        {product.technicalSheet && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 text-xs w-full sm:w-auto"
+                                                onClick={() => window.open(product.technicalSheet!, '_blank')}
+                                            >
+                                                View Technical Sheet
+                                            </Button>
+                                        )}
                                     </div>
 
                                     <div className="mt-auto pt-6 border-t border-border/40 flex items-baseline justify-between">

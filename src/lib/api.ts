@@ -76,9 +76,12 @@ export async function fetchAPI(path: string, options: RequestInit = {}) {
 
     const makeRequest = async (token?: string) => {
         const headers: any = {
-            'Content-Type': 'application/json',
             ...options.headers,
         };
+
+        if (!(options.body instanceof FormData)) {
+            headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+        }
 
         const authToken = token || getAuthToken();
         if (authToken) {
@@ -545,5 +548,27 @@ export async function submitDemoRequest(email: string) {
     return fetchAPI('/demo-requests', {
         method: 'POST',
         body: JSON.stringify({ email })
+    });
+}
+
+export async function uploadAsset(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return fetchAPI('/assets/upload', {
+        method: 'POST',
+        body: formData,
+        headers: getAuthHeaders() // Content-Type header is automatically set by browser for FormData
+    });
+}
+
+export async function fetchAssets() {
+    return fetchAPI('/assets', { headers: getAuthHeaders() });
+}
+
+export async function deleteAsset(assetId: string) {
+    return fetchAPI(`/assets/${assetId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
     });
 }

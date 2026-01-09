@@ -34,8 +34,12 @@ export function SmartDatePicker({
 
     // Sync input value when date prop changes
     React.useEffect(() => {
-        if (date) {
-            setInputValue(format(date, "P")) // Localized date format (e.g., 01/24/2025)
+        if (date && isValid(date)) {
+            try {
+                setInputValue(format(date, "P"))
+            } catch (e) {
+                setInputValue("")
+            }
         } else {
             setInputValue("")
         }
@@ -67,8 +71,12 @@ export function SmartDatePicker({
         // For "industry standard", usually we leave the invalid text but don't submit it, OR we revert.
         // Let's revert to the formatted valid date if strictly invalid, or keep text if it parsed successfully.
 
-        if (date) {
-            setInputValue(format(date, "P"))
+        if (date && isValid(date)) {
+            try {
+                setInputValue(format(date, "P"))
+            } catch {
+                setInputValue("")
+            }
         } else {
             // If undefined, clearing is safe
             setInputValue("")
@@ -107,7 +115,7 @@ export function SmartDatePicker({
                 <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                         mode="single"
-                        selected={date}
+                        selected={date && isValid(date) ? date : undefined}
                         onSelect={handleCalendarSelect}
                         initialFocus
                     />

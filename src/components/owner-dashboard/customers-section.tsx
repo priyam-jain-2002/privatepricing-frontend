@@ -479,6 +479,16 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                 )
             }
 
+            {/* PRICING VIEW */}
+            {mode === 'pricing' && activeCustomer && (
+                <CustomerPricingManagement
+                    storeId={activeStore.id}
+                    customerId={activeCustomer.id}
+                    customer={activeCustomer}
+                    operationCostPercentage={activeStore.operationCostPercentage || 0}
+                />
+            )}
+
 
 
             <DeleteConfirmationDialog
