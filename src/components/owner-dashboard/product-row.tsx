@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation"
 
 export function ProductRow({ product, onEditDetails, operationCostPercentage }: Omit<ProductRowProps, 'onUpdate'>) {
     const router = useRouter()
-    const costPrice = (parseFloat(product.basePrice || '0') * (1 + (parseFloat(product.baseFreight || '0') + operationCostPercentage) / 100)).toFixed(2)
+    const costPrice = product.costPrice
 
     return (
         <tr className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50 group">
