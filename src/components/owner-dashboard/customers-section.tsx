@@ -26,6 +26,7 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
 
     const [customers, setCustomers] = useState<any[]>([])
     const [customerAdmins, setCustomerAdmins] = useState<any[]>([])
+    const [userRole, setUserRole] = useState<string | null>(null)
 
     // Local UI state (modals)
     const [editingCustomer, setEditingCustomer] = useState<any>(null)
@@ -45,6 +46,7 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
 
     useEffect(() => {
         loadCustomers()
+        setUserRole(localStorage.getItem('user_role'))
     }, [activeStore])
 
     const loadCustomers = async () => {
@@ -227,9 +229,11 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                                 className="pl-9 bg-white"
                             />
                         </div>
-                        <Button onClick={() => setEditingCustomer({ isNew: true })} className="w-full sm:w-auto">
-                            <Plus className="mr-2 h-4 w-4" /> Add New Customer
-                        </Button>
+                        {userRole !== '5' && (
+                            <Button onClick={() => setEditingCustomer({ isNew: true })} className="w-full sm:w-auto">
+                                <Plus className="mr-2 h-4 w-4" /> Add New Customer
+                            </Button>
+                        )}
                     </div>
 
                     <Card className="border border-gray-200 bg-white shadow-none">
@@ -239,8 +243,12 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                                     <tr className="border-b border-gray-200 bg-gray-50">
                                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Company Name</th>
                                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">GSTIN</th>
-                                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
-                                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Compliance</th>
+                                        {userRole !== '5' && (
+                                            <>
+                                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
+                                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Compliance</th>
+                                            </>
+                                        )}
                                         <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
                                     </tr>
                                 </thead>
@@ -264,54 +272,62 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                                                     {customer.name}
                                                 </td>
                                                 <td className="px-6 py-4 text-sm text-gray-600">{customer.GSTIN || "-"}</td>
-                                                <td className="px-6 py-4 text-sm text-gray-600">
-                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize 
-                                  ${customer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                                                        {customer.status}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-sm">
-                                                    {hasWarning ? (
-                                                        <TooltipProvider>
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200 cursor-help">
-                                                                        <AlertTriangle className="h-3.5 w-3.5" />
-                                                                        <span className="text-xs font-medium">Attention Needed</span>
-                                                                    </div>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent className="max-w-xs bg-slate-900 text-white border-slate-800">
-                                                                    <p className="font-semibold mb-1">Missing Configuration:</p>
-                                                                    <ul className="list-disc pl-4 space-y-1 text-xs">
-                                                                        {missingBranches && <li>No branches configured</li>}
-                                                                        {missingTerms && <li>Missing Payment Terms or Delivery Time</li>}
-                                                                    </ul>
-                                                                </TooltipContent>
-                                                            </Tooltip>
-                                                        </TooltipProvider>
-                                                    ) : (
-                                                        <span className="text-xs text-green-600 font-medium flex items-center gap-1">
-                                                            <div className="h-1.5 w-1.5 rounded-full bg-green-500"></div> All Set
-                                                        </span>
-                                                    )}
-                                                </td>
+                                                {userRole !== '5' && (
+                                                    <>
+                                                        <td className="px-6 py-4 text-sm text-gray-600">
+                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize 
+                                          ${customer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                                                                {customer.status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-sm">
+                                                            {hasWarning ? (
+                                                                <TooltipProvider>
+                                                                    <Tooltip>
+                                                                        <TooltipTrigger asChild>
+                                                                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200 cursor-help">
+                                                                                <AlertTriangle className="h-3.5 w-3.5" />
+                                                                                <span className="text-xs font-medium">Attention Needed</span>
+                                                                            </div>
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent className="max-w-xs bg-slate-900 text-white border-slate-800">
+                                                                            <p className="font-semibold mb-1">Missing Configuration:</p>
+                                                                            <ul className="list-disc pl-4 space-y-1 text-xs">
+                                                                                {missingBranches && <li>No branches configured</li>}
+                                                                                {missingTerms && <li>Missing Payment Terms or Delivery Time</li>}
+                                                                            </ul>
+                                                                        </TooltipContent>
+                                                                    </Tooltip>
+                                                                </TooltipProvider>
+                                                            ) : (
+                                                                <span className="text-xs text-green-600 font-medium flex items-center gap-1">
+                                                                    <div className="h-1.5 w-1.5 rounded-full bg-green-500"></div> All Set
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                    </>
+                                                )}
                                                 <td className="px-6 py-4 text-sm text-right space-x-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => navigateToAdmins(customer.id)}
-                                                    >
-                                                        Manage Admins
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => {
-                                                            setEditingCustomer(customer);
-                                                        }}
-                                                    >
-                                                        <Settings className="h-4 w-4" />
-                                                    </Button>
+                                                    {userRole !== '5' && (
+                                                        <>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => navigateToAdmins(customer.id)}
+                                                            >
+                                                                Manage Admins
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => {
+                                                                    setEditingCustomer(customer);
+                                                                }}
+                                                            >
+                                                                <Settings className="h-4 w-4" />
+                                                            </Button>
+                                                        </>
+                                                    )}
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
@@ -323,7 +339,7 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                                                             navigateToPricing(customer.id)
                                                         }}
                                                     >
-                                                        Manage Pricing
+                                                        {userRole === '5' ? "View Pricing" : "Manage Pricing"}
                                                     </Button>
                                                 </td>
                                             </tr>
@@ -340,7 +356,7 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                         onOpenChange={(open) => !open && setEditingCustomer(null)}
                         onUpdate={loadCustomers}
                     />
-                </div>
+                </div >
             )
             }
 
@@ -463,16 +479,17 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                 )
             }
 
-            {/* MANAGE PRICING VIEW */}
-            {
-                mode === 'pricing' && activeCustomer && activeStore && (
-                    <CustomerPricingManagement
-                        storeId={activeStore.id}
-                        customerId={activeCustomer.id}
-                        customer={activeCustomer}
-                    />
-                )
-            }
+            {/* PRICING VIEW */}
+            {mode === 'pricing' && activeCustomer && (
+                <CustomerPricingManagement
+                    storeId={activeStore.id}
+                    customerId={activeCustomer.id}
+                    customer={activeCustomer}
+                    operationCostPercentage={activeStore.operationCostPercentage || 0}
+                />
+            )}
+
+
 
             <DeleteConfirmationDialog
                 open={!!deletingAdminId}
@@ -481,6 +498,6 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                 title="Delete Customer Admin"
                 description="Are you sure you want to delete this customer admin? They will lose access to the storefront immediately."
             />
-        </div>
+        </div >
     )
 }

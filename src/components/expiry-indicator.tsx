@@ -32,7 +32,12 @@ export function ExpiryIndicator({
   if (!isCritical && !isWarning) return null
 
   const date = new Date(earliestExpiryDate)
-  const formattedDate = format(date, "dd/MM/yyyy")
+  let formattedDate = ""
+  try {
+    formattedDate = format(date, "dd/MM/yyyy")
+  } catch (e) {
+    return null // If date is invalid, don't show indicator
+  }
 
   const tooltipText =
     type === "customer"

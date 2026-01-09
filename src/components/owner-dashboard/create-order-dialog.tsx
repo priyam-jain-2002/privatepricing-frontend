@@ -18,13 +18,14 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Plus, Minus, Search, Loader2, ShoppingCart, Receipt, Building2, User, X } from "lucide-react"
 import { toast } from "sonner"
 import {
     fetchCustomers,
     fetchBranches,
-    getCustomerPricings,
+    getCustomerPricingsView,
     fetchProducts,
     updateTeamOrder,
 } from "@/lib/api"
@@ -98,7 +99,8 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
     const [contactPerson, setContactPerson] = useState("")
     const [contactPhone, setContactPhone] = useState("")
     const [deliveryAddress, setDeliveryAddress] = useState("")
-    const [showContactInfo, setShowContactInfo] = useState(false)
+    // const [showContactInfo, setShowContactInfo] = useState(false) // Removed in favor of dialog
+    const [showDeliveryDialog, setShowDeliveryDialog] = useState(false)
     const [mobileTab, setMobileTab] = useState<'catalog' | 'cart'>('catalog')
 
     // Clear cart on mode switch
@@ -155,8 +157,9 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
             setPoNumber("")
             setContactPerson("")
             setContactPhone("")
+            setContactPhone("")
             setDeliveryAddress("")
-            setShowContactInfo(false)
+            // setShowContactInfo(false)
         }
     }, [open, activeStore])
 
@@ -194,7 +197,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
         try {
             const [branchesData, pricingsData, productsData] = await Promise.all([
                 fetchBranches(customerId).catch(() => []),
-                getCustomerPricings(activeStore.id, customerId).catch(() => []),
+                getCustomerPricingsView(activeStore.id, customerId).catch(() => []),
                 fetchProducts().catch(() => [])
             ])
             setBranches(Array.isArray(branchesData) ? branchesData : [])
@@ -613,6 +616,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
                                                                 onChange={(e) => setItemQuantity(product.id, parseInt(e.target.value) || 0)}
                                                                 type="number"
                                                                 min="0"
+                                                                onWheel={(e) => e.currentTarget.blur()}
                                                             />
                                                             <button
                                                                 className="w-6 h-7 flex items-center justify-center rounded-md hover:bg-black hover:text-white text-gray-900 transition-colors"
@@ -695,6 +699,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
                                                                 onChange={(e) => setItemQuantity(item.productId, parseInt(e.target.value) || 0)}
                                                                 type="number"
                                                                 min="0"
+                                                                onWheel={(e) => e.currentTarget.blur()}
                                                                 placeholder="Qty"
                                                             />
                                                             <span className="text-sm font-medium">units</span>
@@ -712,6 +717,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
                                                                     value={currentPrice === 0 ? '' : currentPrice}
                                                                     onChange={(e) => updateCartItemPrice(item.productId, parseFloat(e.target.value) || 0)}
                                                                     min="0"
+                                                                    onWheel={(e) => e.currentTarget.blur()}
                                                                 />
                                                             </div>
                                                         ) : (
@@ -730,60 +736,71 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
                         <div className="p-6 bg-white border-t space-y-4">
                             {orderType === 'quick' && (
                                 <div className="space-y-3">
-                                    {!showContactInfo ? (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="w-full text-black font-bold border-gray-200 hover:bg-gray-50"
-                                            onClick={() => setShowContactInfo(true)}
-                                        >
-                                            <Plus className="w-4 h-4 mr-2" />
-                                            Add Delivery & Contact Info
-                                        </Button>
-                                    ) : (
-                                        <div className="space-y-4 rounded-lg border border-dashed border-gray-200 p-4 transition-all">
-                                            <div className="flex justify-between items-center">
-                                                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Delivery Details</h4>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-6 px-2 text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
-                                                    onClick={() => setShowContactInfo(false)}
-                                                >
-                                                    Remove
-                                                </Button>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div className="space-y-1">
-                                                    <Label className="text-[10px] text-gray-400 uppercase">Contact Person</Label>
-                                                    <Input
-                                                        placeholder="Name"
-                                                        className="h-8 bg-white text-xs border-gray-200"
-                                                        value={contactPerson}
-                                                        onChange={e => setContactPerson(e.target.value)}
-                                                    />
+                                    <div className="space-y-3">
+                                        {(!contactPerson && !contactPhone && !deliveryAddress) ? (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="w-full text-black font-bold border-gray-200 hover:bg-gray-50"
+                                                onClick={() => setShowDeliveryDialog(true)}
+                                            >
+                                                <Plus className="w-4 h-4 mr-2" />
+                                                Add Delivery & Contact Info
+                                            </Button>
+                                        ) : (
+                                            <div className="relative group rounded-lg border border-dashed border-gray-200 p-3 bg-gray-50/50 hover:bg-gray-50 transition-all">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="space-y-1">
+                                                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Delivery Details</h4>
+
+                                                        {contactPerson && (
+                                                            <div className="flex items-center gap-2 text-sm text-gray-900">
+                                                                <User className="w-3.5 h-3.5 text-gray-400" />
+                                                                <span className="font-medium">{contactPerson}</span>
+                                                            </div>
+                                                        )}
+
+                                                        {contactPhone && (
+                                                            <div className="flex items-center gap-2 text-xs text-gray-600">
+                                                                <span className="text-gray-400">Ph:</span>
+                                                                <span className="font-mono">{contactPhone}</span>
+                                                            </div>
+                                                        )}
+
+                                                        {deliveryAddress && (
+                                                            <div className="flex items-start gap-2 text-xs text-gray-600 mt-1">
+                                                                <Building2 className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
+                                                                <span className="line-clamp-2">{deliveryAddress}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-7 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                            onClick={() => setShowDeliveryDialog(true)}
+                                                        >
+                                                            Edit
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-7 w-7 p-0 text-red-400 hover:text-red-500 hover:bg-red-50"
+                                                            onClick={() => {
+                                                                setContactPerson("")
+                                                                setContactPhone("")
+                                                                setDeliveryAddress("")
+                                                            }}
+                                                        >
+                                                            <X className="w-3.5 h-3.5" />
+                                                        </Button>
+                                                    </div>
                                                 </div>
-                                                <div className="space-y-1">
-                                                    <Label className="text-[10px] text-gray-400 uppercase">Phone</Label>
-                                                    <Input
-                                                        placeholder="Number"
-                                                        className="h-8 bg-white text-xs border-gray-200"
-                                                        value={contactPhone}
-                                                        onChange={e => setContactPhone(e.target.value)}
-                                                    />
-                                                </div>
                                             </div>
-                                            <div className="space-y-1">
-                                                <Label className="text-[10px] text-gray-400 uppercase">Address</Label>
-                                                <Input
-                                                    placeholder="Full Delivery Address"
-                                                    className="h-8 bg-white text-xs border-gray-200"
-                                                    value={deliveryAddress}
-                                                    onChange={e => setDeliveryAddress(e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
                             )}
 
@@ -844,6 +861,74 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
                         <Button onClick={executeOrderSubmission} disabled={submitting}>
                             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Confirm Update
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Nested Delivery Dialog */}
+            <Dialog open={showDeliveryDialog} onOpenChange={setShowDeliveryDialog}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Delivery Details</DialogTitle>
+                        <DialogDescription>
+                            Enter contact and shipping information for this order.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Contact Person</Label>
+                                <Input
+                                    placeholder="Name"
+                                    value={contactPerson}
+                                    onChange={e => setContactPerson(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Phone Number</Label>
+                                <div className="space-y-1">
+                                    <Input
+                                        placeholder="Mobile (10 digits)"
+                                        value={contactPhone}
+                                        onChange={e => {
+                                            const val = e.target.value.replace(/\D/g, '').slice(0, 10)
+                                            setContactPhone(val)
+                                        }}
+                                        type="tel"
+                                        maxLength={10}
+                                    />
+                                    {contactPhone.length > 0 && contactPhone.length < 10 && (
+                                        <p className="text-[10px] text-red-500">Must be 10 digits</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Shipping Address</Label>
+                            <div className="space-y-1">
+                                <Textarea
+                                    placeholder="Full Address, Landmark, etc."
+                                    value={deliveryAddress}
+                                    onChange={e => setDeliveryAddress(e.target.value.slice(0, 200))}
+                                    className="min-h-[100px] resize-none"
+                                />
+                                <div className="text-[10px] text-gray-400 text-right">
+                                    {deliveryAddress.length}/200
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowDeliveryDialog(false)}>Cancel</Button>
+                        <Button
+                            onClick={() => setShowDeliveryDialog(false)}
+                            disabled={contactPhone.length > 0 && contactPhone.length < 10}
+                        >
+                            Save Details
                         </Button>
                     </DialogFooter>
                 </DialogContent>

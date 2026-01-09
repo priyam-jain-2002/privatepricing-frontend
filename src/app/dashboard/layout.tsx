@@ -34,7 +34,10 @@ function DashboardSidebar({ className, onFormatChange }: { className?: string, o
 
     const filteredItems = menuItems.filter(item => {
         if (item.label === "Team") {
-            return role === '0'; // Only visible to Store Owner
+            return role === '0' || role === '4'; // Store Owner or Store Manager
+        }
+        if (item.label === "Products") {
+            return role !== '5'; // Hidden for Order Manager (5)
         }
         return true;
     });

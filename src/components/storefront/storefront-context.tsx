@@ -17,6 +17,9 @@ export interface Product {
     description?: string
     minimumQuantity?: number
     productSku?: string
+    images: string[]
+    technicalSheet: string | null
+    hsnCode: string | null
 }
 
 export enum UserRole {
@@ -199,7 +202,10 @@ export function StorefrontProvider({ children }: { children: ReactNode }) {
                 currency: p.currency || 'INR',
                 description: p.productDescription,
                 minimumQuantity: p.minimumQuantity || 1,
-                productSku: p.productSku
+                productSku: p.productSku,
+                images: p.images || [],
+                technicalSheet: p.technicalSheet || null,
+                hsnCode: p.hsnCode || null
             }))
 
             // Re-hydrate quantities if we have them in state (if we are just refreshing data)
