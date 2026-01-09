@@ -356,7 +356,7 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                         onOpenChange={(open) => !open && setEditingCustomer(null)}
                         onUpdate={loadCustomers}
                     />
-                </div>
+                </div >
             )
             }
 
@@ -479,16 +479,7 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                 )
             }
 
-            {/* MANAGE PRICING VIEW */}
-            {
-                mode === 'pricing' && activeCustomer && activeStore && (
-                    <CustomerPricingManagement
-                        storeId={activeStore.id}
-                        customerId={activeCustomer.id}
-                        customer={activeCustomer}
-                    />
-                )
-            }
+
 
             <DeleteConfirmationDialog
                 open={!!deletingAdminId}
@@ -497,6 +488,6 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                 title="Delete Customer Admin"
                 description="Are you sure you want to delete this customer admin? They will lose access to the storefront immediately."
             />
-        </div>
+        </div >
     )
 }

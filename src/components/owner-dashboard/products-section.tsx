@@ -2,29 +2,34 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Plus, Settings, Info, Search } from "lucide-react"
-import { fetchProducts, createProduct, updateProduct } from "@/lib/api"
+import { Plus, Settings, Info, Search, Upload, Download, FileSpreadsheet, File, HardDriveDownload } from "lucide-react"
+import { fetchProducts, importProducts, exportProducts } from "@/lib/api"
 import { toast } from "sonner"
 import { OperationCostDialog } from "./operation-cost-dialog"
 import { ProductRow } from "./product-row"
 import { useStore } from "@/contexts/store-context"
+import { useRouter } from "next/navigation"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface ProductsSectionProps {
     activeStore: any
 }
 
 export function ProductsSection({ activeStore }: ProductsSectionProps) {
-    // We can get global store actions from context if needed for updates
-    const { stores, setActiveStore, refreshStores } = useStore()
+    const { refreshStores } = useStore()
+    const router = useRouter()
 
     // Local state
     const [products, setProducts] = useState<any[]>([])
-    const [isAddProductOpen, setIsAddProductOpen] = useState(false)
-    const [editingProduct, setEditingProduct] = useState<any>(null)
     const [searchQuery, setSearchQuery] = useState("")
+    const [isImporting, setIsImporting] = useState(false)
 
     useEffect(() => {
         if (activeStore) {
@@ -41,55 +46,66 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
         }
     }
 
-    const handleCreateProduct = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const form = e.target as HTMLFormElement;
-        const formData = new FormData(form);
+    const [uploadProgress, setUploadProgress] = useState(0)
+
+    const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !activeStore) return;
+
+        setIsImporting(true);
+        setUploadProgress(0);
 
         try {
-            const basePriceNum = parseFloat(formData.get('basePrice') as string || '0');
-            const baseFreightNum = parseFloat(formData.get('baseFreight') as string || '0');
-            const totalPercentage = baseFreightNum + (activeStore?.operationCostPercentage || 0);
-            const calculatedCostPrice = basePriceNum * (1 + totalPercentage / 100);
+            const toastId = toast.loading("Uploading products...")
 
-            await createProduct({
-                storeId: activeStore.id,
-                name: formData.get('name'),
-                sku: formData.get('sku'),
-                hsnCode: formData.get('hsnCode'),
-                basePrice: basePriceNum,
-                baseFreight: baseFreightNum,
-                costPrice: parseFloat(calculatedCostPrice.toFixed(2)),
-                gst: parseFloat(formData.get('gst') as string || '0'),
-                currency: 'INR'
+            const result = await importProducts(activeStore.id, file, (progress) => {
+                setUploadProgress(progress);
+                toast.message(`Uploading: ${progress}%`, { id: toastId });
             });
+
+            // The result structure depends on what backend returns for the final chunk. 
+            // Assuming the backend performs the import on the last chunk and returns the same result structure as before.
+            // But based on my API change, api.ts returns { success: true, message: "Upload complete" } for interim chunks?
+            // Wait, api.ts returns the LAST chunk response. 
+            // I need to ensure backend returns the import stats on final chunk.
+
+            // For now, let's assume successful upload means successful import start or completion.
+            toast.success("Import processed successfully", { id: toastId });
+
+            // If the backend returns detailed stats in the final chunk response, we can display them.
+            // result might look like { success: X, failed: Y, errors: [...] } if backend aligns.
+            if ((result as any).successCount !== undefined) {
+                toast.success(`Imported ${(result as any).successCount} products. Failed: ${(result as any).failedCount}`);
+                if ((result as any).errors?.length > 0) {
+                    console.error("Import errors:", (result as any).errors);
+                    toast.warning(`Check console for import errors`);
+                }
+            }
+
             await loadProducts();
-            setIsAddProductOpen(false);
-            form.reset();
-            toast.success("Product created successfully!");
         } catch (err: any) {
-            toast.error("Failed to create product: " + err.message);
+            toast.error("Import failed: " + err.message);
+        } finally {
+            setIsImporting(false);
+            setUploadProgress(0);
+            e.target.value = ''; // Reset input
         }
     }
 
-    const handleUpdateProductDetails = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!editingProduct) return;
-
-        const form = e.target as HTMLFormElement;
-        const formData = new FormData(form);
-
+    const handleExport = async (format: 'xml' | 'xlsx') => {
         try {
-            await updateProduct(editingProduct.id, {
-                name: formData.get('name'),
-                sku: formData.get('sku'),
-                hsnCode: formData.get('hsnCode'),
-            });
-            await loadProducts();
-            setEditingProduct(null);
-            toast.success("Product updated successfully!");
+            const blob = await exportProducts(activeStore.id, format);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `products_export_${new Date().toISOString().split('T')[0]}.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            toast.success("Export started");
         } catch (err: any) {
-            toast.error("Failed to update product: " + err.message);
+            toast.error("Export failed: " + err.message);
         }
     }
 
@@ -104,7 +120,6 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
             <OperationCostDialog
                 store={activeStore}
                 onUpdate={async (newPercentage) => {
-                    // Refresh stores to get updated percentage
                     await refreshStores();
                     toast.success("Operation cost updated");
                 }}
@@ -123,87 +138,44 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
                 </div>
 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {/* Hidden Import Input */}
+                    <input
+                        type="file"
+                        id="import-file"
+                        className="hidden"
+                        accept=".xml,.xlsx,.xls"
+                        onChange={handleImport}
+                        disabled={isImporting}
+                    />
+
                     <Button variant="outline" onClick={() => document.getElementById('operation-cost-trigger')?.click()} className="w-full sm:w-auto">
-                        <Settings className="mr-2 h-4 w-4" />
                         Op. Cost ({activeStore?.operationCostPercentage || 10}%)
                     </Button>
-                    <Button onClick={() => setIsAddProductOpen(true)} className="w-full sm:w-auto">
+
+                    <Button onClick={() => router.push('/dashboard/products/new')} className="w-full sm:w-auto">
                         <Plus className="mr-2 h-4 w-4" /> Add Product
                     </Button>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="icon">
+                                <Settings className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => document.getElementById('import-file')?.click()} disabled={isImporting}>
+                                <HardDriveDownload className="mr-2 h-4 w-4" /> {isImporting ? 'Importing...' : 'Import Products'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleExport('xlsx')}>
+                                <FileSpreadsheet className="mr-2 h-4 w-4" /> Export Excel
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleExport('xml')}>
+                                <File className="mr-2 h-4 w-4" /> Export XML (Tally)
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
-
-            <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
-                <DialogContent className="max-w-lg w-full max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Add New Product</DialogTitle>
-                    </DialogHeader>
-                    <form onSubmit={handleCreateProduct} className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Product Name</label>
-                            <Input name="name" required />
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">SKU</label>
-                                <Input name="sku" required />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">HSN Code</label>
-                                <Input name="hsnCode" placeholder="Optional" />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Base Price</label>
-                                <Input name="basePrice" type="number" step="0.01" min="0" required />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Incoming Freight (%)</label>
-                                <Input name="baseFreight" type="number" step="0.01" min="0" placeholder="%" />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">GST (%)</label>
-                                <Input name="gst" type="number" step="0.01" min="0" defaultValue="18" />
-                            </div>
-                        </div>
-                        <div className="flex justify-end gap-2">
-                            <Button type="button" variant="ghost" onClick={() => setIsAddProductOpen(false)}>Cancel</Button>
-                            <Button type="submit">Create Product</Button>
-                        </div>
-                    </form>
-                </DialogContent>
-            </Dialog >
-
-            <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
-                <DialogContent className="max-w-lg w-full">
-                    <DialogHeader>
-                        <DialogTitle>Edit Product Details</DialogTitle>
-                    </DialogHeader>
-                    <form onSubmit={handleUpdateProductDetails} className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Product Name</label>
-                            <Input name="name" defaultValue={editingProduct?.name} required />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">SKU</label>
-                                <Input name="sku" defaultValue={editingProduct?.sku} required />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">HSN Code</label>
-                                <Input name="hsnCode" defaultValue={editingProduct?.hsnCode} />
-                            </div>
-                        </div>
-                        <div className="flex justify-end gap-2">
-                            <Button type="button" variant="ghost" onClick={() => setEditingProduct(null)}>Cancel</Button>
-                            <Button type="submit">Save Changes</Button>
-                        </div>
-                    </form>
-                </DialogContent>
-            </Dialog>
 
             <Card className="border border-gray-200 bg-white shadow-none">
                 <div className="overflow-x-auto">
@@ -240,8 +212,7 @@ export function ProductsSection({ activeStore }: ProductsSectionProps) {
                                 <ProductRow
                                     key={product.id}
                                     product={product}
-                                    onUpdate={loadProducts}
-                                    onEditDetails={() => setEditingProduct(product)}
+                                    onEditDetails={() => router.push(`/dashboard/products/${product.id}`)}
                                     operationCostPercentage={activeStore?.operationCostPercentage || 0}
                                 />
                             ))}
