@@ -205,6 +205,76 @@ export async function updateProduct(productId: string, data: any) {
     });
 }
 
+// Chunk size: 5MB
+const CHUNK_SIZE = 5 * 1024 * 1024;
+
+export async function importProducts(storeId: string, file: File, onProgress?: (progress: number) => void) {
+    // If file is small, just upload directly (or we can always use chunking for consistency)
+    // For now, let's always use chunking to support the user request and unified backend logic
+    return uploadLargeFile(storeId, file, onProgress);
+}
+
+async function uploadLargeFile(storeId: string, file: File, onProgress?: (progress: number) => void) {
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    const uploadId = crypto.randomUUID();
+    const fileName = file.name;
+
+    for (let i = 0; i < totalChunks; i++) {
+        const start = i * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, file.size);
+        const chunk = file.slice(start, end);
+
+        await uploadChunk(storeId, chunk, uploadId, i, totalChunks, fileName);
+
+        if (onProgress) {
+            onProgress(Math.round(((i + 1) / totalChunks) * 100));
+        }
+    }
+
+    return { success: true, message: "Upload complete" }; // Final response comes from last chunk
+}
+
+async function uploadChunk(storeId: string, chunk: Blob, uploadId: string, chunkIndex: number, totalChunks: number, fileName: string) {
+    const formData = new FormData();
+    formData.append('file', chunk);
+    formData.append('uploadId', uploadId);
+    formData.append('chunkIndex', chunkIndex.toString());
+    formData.append('totalChunks', totalChunks.toString());
+    formData.append('fileName', fileName);
+
+    const token = getAuthToken();
+    const headers: any = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_URL}/products/upload-chunk`, {
+        method: 'POST',
+        headers,
+        body: formData
+    });
+
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.message || `Chunk ${chunkIndex} upload failed`);
+    }
+    return res.json();
+}
+
+export async function exportProducts(storeId: string, format: string = 'xml') {
+    const token = getAuthToken();
+    const headers: any = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_URL}/products/export?format=${format}`, {
+        method: 'GET',
+        headers
+    });
+
+    if (!res.ok) {
+        throw new Error('Export failed');
+    }
+    return res.blob();
+}
+
 export async function createCustomer(data: any) {
     return fetchAPI(`/customers`, {
         method: 'POST',

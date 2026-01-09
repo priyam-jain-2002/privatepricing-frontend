@@ -304,6 +304,13 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                                                         Manage Admins
                                                     </Button>
                                                     <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => router.push(`/dashboard/customers/${customer.id}/pricing`)}
+                                                    >
+                                                        Manage Pricing
+                                                    </Button>
+                                                    <Button
                                                         variant="ghost"
                                                         size="icon"
                                                         onClick={() => {
@@ -312,19 +319,7 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                                                     >
                                                         <Settings className="h-4 w-4" />
                                                     </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            analytics.capture('manage_pricing_clicked', {
-                                                                customerId: customer.id,
-                                                                customerName: customer.name
-                                                            })
-                                                            navigateToPricing(customer.id)
-                                                        }}
-                                                    >
-                                                        Manage Pricing
-                                                    </Button>
+
                                                 </td>
                                             </tr>
                                         )
@@ -340,7 +335,7 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                         onOpenChange={(open) => !open && setEditingCustomer(null)}
                         onUpdate={loadCustomers}
                     />
-                </div>
+                </div >
             )
             }
 
@@ -463,16 +458,7 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                 )
             }
 
-            {/* MANAGE PRICING VIEW */}
-            {
-                mode === 'pricing' && activeCustomer && activeStore && (
-                    <CustomerPricingManagement
-                        storeId={activeStore.id}
-                        customerId={activeCustomer.id}
-                        customer={activeCustomer}
-                    />
-                )
-            }
+
 
             <DeleteConfirmationDialog
                 open={!!deletingAdminId}
@@ -481,6 +467,6 @@ export function CustomersSection({ activeStore }: CustomersSectionProps) {
                 title="Delete Customer Admin"
                 description="Are you sure you want to delete this customer admin? They will lose access to the storefront immediately."
             />
-        </div>
+        </div >
     )
 }
