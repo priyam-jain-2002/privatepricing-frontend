@@ -28,7 +28,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.opbase.in'),
+  metadataBase: new URL('https://opbase.in'),
   title: {
     default: "Opbase - Order Operations Platform",
     template: "%s | Opbase"
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://www.opbase.in',
+    url: 'https://opbase.in',
     title: "Opbase - Order Operations Platform",
     description: "The unified solution to manage orders without ERP. Simplify your workflow with WhatsApp order management, customer specific pricing, and precise partial delivery tracking.",
     siteName: "Opbase",
