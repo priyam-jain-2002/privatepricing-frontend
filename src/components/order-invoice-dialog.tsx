@@ -113,7 +113,17 @@ export function PayOrderDialog({
                             <div>
                                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Ship To</h4>
                                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                                    {order.shippingAddressSnapshot || "Picked up in store"}
+                                    {order.shippingAddressSnapshot || (
+                                        <div className="flex flex-col gap-1">
+                                            <span className="font-medium text-gray-500 italic">Picked up in store</span>
+                                            {(order.contactPerson || order.contactPhone) && (
+                                                <div className="mt-2 pt-2 border-t border-gray-200">
+                                                    {order.contactPerson && <div><span className="text-gray-500 text-xs font-semibold uppercase tracking-wider mr-2">Contact:</span> {order.contactPerson}</div>}
+                                                    {order.contactPhone && <div><span className="text-gray-500 text-xs font-semibold uppercase tracking-wider mr-2">Phone:</span> {order.contactPhone}</div>}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

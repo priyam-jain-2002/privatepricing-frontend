@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, Save, Check, Calendar as CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
 import { Button } from "@/components/ui/button"
@@ -125,6 +126,24 @@ export function PricingRow({ product, initialPricing, onSave, savingId, freightR
         setSellingPrice(newPrice.toFixed(2));
     }
 
+    // Effect: If price is cleared or invalid, ensure visibility is OFF
+    useEffect(() => {
+        if ((!sellingPrice || parseFloat(sellingPrice) <= 0) && visible) {
+            // Only force off if it WAS on. We don't want to spam updates or dirty state unnecessarily if already off.
+            // But we do need to update the state.
+            // Note: calling setVisible inside render/effect loop can be triggered by initial load if data is bad.
+            // Let's rely on user interaction mostly, but for the input field:
+        }
+    }, [sellingPrice])
+
+    const handlePriceChange = (val: string) => {
+        handleChange(setSellingPrice, val);
+        // If price is cleared, turn off visibility
+        if (!val || parseFloat(val) <= 0) {
+            setVisible(false);
+        }
+    }
+
     const isSaving = savingId === product.id
 
     return (
@@ -222,7 +241,7 @@ export function PricingRow({ product, initialPricing, onSave, savingId, freightR
                                         className="h-8 w-24 text-right"
                                         placeholder={(product.costPrice || 0).toString()}
                                         value={sellingPrice}
-                                        onChange={(e) => handleChange(setSellingPrice, e.target.value)}
+                                        onChange={(e) => handlePriceChange(e.target.value)}
                                     />
                                 </>
                             ) : (
@@ -245,7 +264,17 @@ export function PricingRow({ product, initialPricing, onSave, savingId, freightR
                 <>
                     <td className="px-6 py-4 text-center">
                         <button
-                            onClick={() => handleChange(setVisible, !visible)}
+                            onClick={() => {
+                                const newVisibility = !visible;
+                                if (newVisibility) {
+                                    // Check for valid price before enabling
+                                    if (!sellingPrice || parseFloat(sellingPrice) <= 0) {
+                                        toast.error("Set a valid selling price before enabling visibility");
+                                        return;
+                                    }
+                                }
+                                handleChange(setVisible, newVisibility)
+                            }}
                             className={`inline-flex h-6 w-11 items-center rounded-full transition-colors ${visible ? "bg-blue-600" : "bg-gray-300"}`}
                         >
                             <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${visible ? "translate-x-5" : "translate-x-0.5"}`} />

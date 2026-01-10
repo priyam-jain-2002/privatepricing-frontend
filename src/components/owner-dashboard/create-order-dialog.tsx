@@ -234,6 +234,20 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
         }
     }
 
+    // Unified Order Type Logic
+    // Default to 'quick'
+    // If customer selected -> 'customer'
+    useEffect(() => {
+        if (selectedCustomerId) {
+            setOrderType('customer')
+        } else {
+            setOrderType('quick')
+        }
+        // Clear cart on context switch to prevent cross-customer data leaks or pricing issues
+        setCart([])
+    }, [selectedCustomerId])
+
+    // Load available products
     const availableProducts = useMemo(() => {
         if (!Array.isArray(products) || !products.length) return []
 
@@ -445,123 +459,111 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
                     <div className={`${mobileTab === 'catalog' ? 'flex' : 'hidden'} md:flex flex-1 flex-col min-w-0 border-r bg-white`}>
 
                         {/* 1. Context Pickers */}
-                        <div className="p-6 border-b space-y-4 shrink-0 bg-white z-10">
+                        <div className="p-6 border-b space-y-6 shrink-0 bg-white z-10 w-full relative">
 
-                            {/* Order Type Toggle */}
-                            <div className="flex p-1 bg-gray-100 rounded-lg w-full mb-4">
-                                <button
-                                    onClick={() => {
-                                        if (orderType !== 'quick') {
-                                            setOrderType('quick')
-                                            setCart([])
-                                            setSearchQuery("")
-                                        }
-                                    }}
-                                    className={`flex-1 text-sm font-medium py-1.5 rounded-md transition-all ${orderType === 'quick' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-                                >
-                                    Quick Order
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (orderType !== 'customer') {
-                                            setOrderType('customer')
-                                            setCart([])
-                                            setSearchQuery("")
-                                        }
-                                    }}
-                                    className={`flex-1 text-sm font-medium py-1.5 rounded-md transition-all ${orderType === 'customer' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-                                >
-                                    Customer Order
-                                </button>
+                            {/* UNIFIED CUSTOMER SELECTOR */}
+                            <div className="space-y-1.5 w-full">
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-xs font-semibold uppercase text-gray-500 tracking-wider">Customer / Account</Label>
+                                    {selectedCustomerId && (
+                                        <button
+                                            onClick={() => {
+                                                setSelectedCustomerId('')
+                                                setOrderType('quick')
+                                            }}
+                                            className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
+                                        >
+                                            Clear Selection (Walk-in)
+                                        </button>
+                                    )}
+                                </div>
+                                <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                                    <SelectTrigger className={`bg-gray-50 border-gray-200 ${!selectedCustomerId ? 'text-gray-500 font-normal italic' : 'text-gray-900 font-medium'}`}>
+                                        <SelectValue placeholder="Quick Order / Walk-in Customer" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="quick_order_placeholder" disabled className="text-gray-400 italic text-xs py-1">Select a generic source beneath for Walk-ins</SelectItem>
+                                        {customers.map(c => (
+                                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4">
                                 {orderType === 'customer' ? (
-                                    <>
-                                        <div className="space-y-1.5">
-                                            <Label className="text-xs font-semibold uppercase text-gray-500 tracking-wider">Customer</Label>
-                                            <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                                                <SelectTrigger className="bg-gray-50 border-gray-200">
-                                                    <SelectValue placeholder="Select Customer..." />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {customers.map(c => (
-                                                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-
-                                            <div className="flex items-center space-x-2 mt-2 pt-1">
-                                                <input
-                                                    type="checkbox"
-                                                    id="pickup-mode"
-                                                    checked={isPickup}
-                                                    onChange={(e) => setIsPickup(e.target.checked)}
-                                                    className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
-                                                />
-                                                <label
-                                                    htmlFor="pickup-mode"
-                                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-gray-700"
-                                                >
-                                                    Pickup in store
-                                                </label>
-                                            </div>
+                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="flex items-center space-x-2 pt-1">
+                                            <input
+                                                type="checkbox"
+                                                id="pickup-mode"
+                                                checked={isPickup}
+                                                onChange={(e) => setIsPickup(e.target.checked)}
+                                                className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
+                                            />
+                                            <label
+                                                htmlFor="pickup-mode"
+                                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-gray-700 select-none cursor-pointer"
+                                            >
+                                                Pickup in store
+                                            </label>
                                         </div>
+
                                         {!isPickup && (
-                                            <div className="space-y-1.5">
-                                                <Label className="text-xs font-semibold uppercase text-gray-500 tracking-wider">Destination / Shipping Branch</Label>
-                                                <Select
-                                                    value={selectedBranchId}
-                                                    onValueChange={(val) => {
-                                                        setSelectedBranchId(val)
-                                                        // Auto-set billing if same enforced or not yet set? 
-                                                        // If enforcing same, we handle payload construction.
-                                                    }}
-                                                    disabled={!selectedCustomerId || branches.length === 0}
-                                                >
-                                                    <SelectTrigger className="bg-gray-50 border-gray-200">
-                                                        <SelectValue placeholder="Head Office / Default" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {branches.map(b => (
-                                                            <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-xs font-semibold uppercase text-gray-500 tracking-wider">Destination / Shipping Branch</Label>
+                                                    <Select
+                                                        value={selectedBranchId}
+                                                        onValueChange={(val) => {
+                                                            setSelectedBranchId(val)
+                                                        }}
+                                                        disabled={!selectedCustomerId || branches.length === 0}
+                                                    >
+                                                        <SelectTrigger className="bg-gray-50 border-gray-200">
+                                                            <SelectValue placeholder="Head Office / Default" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {branches.map(b => (
+                                                                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+
+                                                {(() => {
+                                                    const customer = customers.find(c => c.id === selectedCustomerId)
+                                                    // Only show separate billing if isBillToSameAsShipTo is FALSE
+                                                    if (customer && !customer.isBillToSameAsShipTo && !isPickup) {
+                                                        return (
+                                                            <div className="space-y-1.5">
+                                                                <Label className="text-xs font-semibold uppercase text-gray-500 tracking-wider">Billing Branch</Label>
+                                                                <Select
+                                                                    value={billingBranchId}
+                                                                    onValueChange={setBillingBranchId}
+                                                                    disabled={!selectedCustomerId || branches.length === 0}
+                                                                >
+                                                                    <SelectTrigger className="bg-gray-50 border-gray-200">
+                                                                        <SelectValue placeholder="Head Office / Default" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {branches.map(b => (
+                                                                            <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+                                                        )
+                                                    }
+                                                    return null
+                                                })()}
                                             </div>
                                         )}
-
-                                        {(() => {
-                                            const customer = customers.find(c => c.id === selectedCustomerId)
-                                            // Only show separate billing if isBillToSameAsShipTo is FALSE
-                                            if (customer && !customer.isBillToSameAsShipTo && !isPickup) {
-                                                return (
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-xs font-semibold uppercase text-gray-500 tracking-wider">Billing Branch</Label>
-                                                        <Select
-                                                            value={billingBranchId}
-                                                            onValueChange={setBillingBranchId}
-                                                            disabled={!selectedCustomerId || branches.length === 0}
-                                                        >
-                                                            <SelectTrigger className="bg-gray-50 border-gray-200">
-                                                                <SelectValue placeholder="Head Office / Default" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {branches.map(b => (
-                                                                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                )
-                                            }
-                                            return null
-                                        })()}
-                                    </>
+                                    </div>
                                 ) : (
                                     // Quick Order Controls
-                                    <div className="col-span-2 space-y-1.5">
-                                        <Label className="text-xs font-semibold uppercase text-gray-500 tracking-wider">Order Source</Label>
+                                    <div className="space-y-1.5 animate-in fade-in duration-300">
+                                        <Label className="text-xs font-semibold uppercase text-gray-500 tracking-wider">Source</Label>
                                         <Select value={quickOrderSource} onValueChange={setQuickOrderSource}>
                                             <SelectTrigger className="bg-gray-50 border-gray-200">
                                                 <SelectValue placeholder="Select Source" />
@@ -577,26 +579,26 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
                                 )}
                             </div>
 
-                            {(selectedCustomerId || orderType === 'quick') && (
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                                    <Input
-                                        placeholder="Search product catalog..."
-                                        className="pl-9 bg-gray-50 border-gray-200"
-                                        value={searchQuery}
-                                        onChange={e => setSearchQuery(e.target.value)}
-                                        autoFocus
-                                    />
-                                </div>
-                            )}
+                            <div className="relative">
+                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                                <Input
+                                    placeholder={orderType === 'customer' ? `Search ${customers.find(c => c.id === selectedCustomerId)?.name || 'customer'}'s catalog...` : "Search global catalog..."}
+                                    className="pl-9 bg-gray-50 border-gray-200"
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                // Auto-focus only if we aren't interacting with selects above constantly
+                                />
+                            </div>
                         </div>
 
                         {/* 2. Product List */}
                         <div className="flex-1 overflow-y-auto bg-gray-50/30">
                             {(orderType === 'customer' && !selectedCustomerId) ? (
+                                // This state should largely be impossible now unless clearing selection, 
+                                // but if it happens, we guide them
                                 <div className="h-full flex flex-col items-center justify-center text-gray-400 p-8 text-center">
                                     <Building2 className="w-12 h-12 mb-3 opacity-20" />
-                                    <p>Select a customer to view their catalog.</p>
+                                    <p>Select a customer above or switch to Quick Order.</p>
                                 </div>
                             ) : loadingData ? (
                                 <div className="h-full flex items-center justify-center">

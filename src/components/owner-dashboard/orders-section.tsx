@@ -432,18 +432,20 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
 
 
 
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8 text-gray-400 hover:text-black"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setEditingOrder(order);
-                                                    setShowCreateOrder(true);
-                                                }}
-                                            >
-                                                <Pencil className="h-3.5 w-3.5" />
-                                            </Button>
+                                            {order.status < 3 && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-gray-400 hover:text-black"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setEditingOrder(order);
+                                                        setShowCreateOrder(true);
+                                                    }}
+                                                >
+                                                    <Pencil className="h-3.5 w-3.5" />
+                                                </Button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
