@@ -566,9 +566,28 @@ export async function fetchAssets() {
     return fetchAPI('/assets', { headers: getAuthHeaders() });
 }
 
+// ... existing code ...
 export async function deleteAsset(assetId: string) {
     return fetchAPI(`/assets/${assetId}`, {
         method: 'DELETE',
+        headers: getAuthHeaders()
+    });
+}
+
+export async function uploadOrderDocument(storeId: string, orderId: string, file: File, type: string) {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("type", type);
+
+    return fetchAPI(`/stores/${storeId}/orders/${orderId}/documents`, {
+        method: 'POST',
+        body: formData,
+        headers: getAuthHeaders() // Content-Type header is automatically set by browser for FormData
+    });
+}
+export async function invalidateOrderDocument(storeId: string, orderId: string, documentId: string) {
+    return fetchAPI(`/stores/${storeId}/orders/${orderId}/documents/${documentId}/invalidate`, {
+        method: 'PATCH',
         headers: getAuthHeaders()
     });
 }

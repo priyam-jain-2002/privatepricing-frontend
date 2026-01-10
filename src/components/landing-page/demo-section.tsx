@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Archive, DollarSign, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -11,11 +11,18 @@ const demos = [
         label: "Order Management",
         icon: Archive,
         description: "Receive orders from WhatsApp, verify inventory, and process them in seconds.",
-        content: (
+        Component: () => (
             <div className="w-full h-full bg-white rounded-lg border border-border p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-8 border-b border-border/40 pb-4">
                     <h3 className="text-lg font-medium text-foreground">Recent Orders</h3>
-                    <div className="bg-primary/5 text-primary px-3 py-1 rounded-full text-xs font-medium">Live Feed</div>
+                    <motion.div
+                        animate={{ opacity: [0.5, 1, 0.5] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                        className="bg-primary/5 text-primary px-3 py-1 rounded-full text-xs font-medium flex items-center gap-2"
+                    >
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                        Live Feed
+                    </motion.div>
                 </div>
                 {/* Mock Table */}
                 <div className="space-y-4">
@@ -40,7 +47,7 @@ const demos = [
         label: "Complex Pricing",
         icon: DollarSign,
         description: "Set different price lists for different regions, customer tiers, or specific products.",
-        content: (
+        Component: () => (
             <div className="w-full h-full bg-white rounded-lg border border-border p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-8 border-b border-border/40 pb-4">
                     <h3 className="text-lg font-medium text-foreground">Price Lists</h3>
@@ -49,12 +56,18 @@ const demos = [
                 <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 border border-border rounded-md bg-muted/20">
                         <div className="text-sm text-muted-foreground mb-1">Wholesale Tier A</div>
-                        <div className="text-2xl font-serif text-foreground">Active</div>
+                        <div className="flex items-center gap-2">
+                            <div className="text-2xl font-serif text-foreground">Active</div>
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        </div>
                         <div className="mt-2 text-xs text-emerald-600 font-medium">+124 Products</div>
                     </div>
                     <div className="p-4 border border-border rounded-md bg-muted/20">
                         <div className="text-sm text-muted-foreground mb-1">Regional (North)</div>
-                        <div className="text-2xl font-serif text-foreground">Active</div>
+                        <div className="flex items-center gap-2">
+                            <div className="text-2xl font-serif text-foreground">Active</div>
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        </div>
                         <div className="mt-2 text-xs text-emerald-600 font-medium">+85 Products</div>
                     </div>
                 </div>
@@ -66,10 +79,14 @@ const demos = [
         label: "Customer Insights",
         icon: Users,
         description: "Know exactly what they buy, how often, and when they last ordered.",
-        content: (
+        Component: () => (
             <div className="w-full h-full bg-white rounded-lg border border-border p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-8 border-b border-border/40 pb-4">
                     <h3 className="text-lg font-medium text-foreground">Customer Health</h3>
+                    <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        Updated 2m ago
+                    </div>
                 </div>
                 <div className="flex items-center gap-4 mb-6">
                     <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-serif italic text-xl">A</div>
@@ -88,6 +105,21 @@ const demos = [
 
 export function DemoSection() {
     const [activeTab, setActiveTab] = useState(demos[0].id)
+
+    // Auto-rotate tabs every 5 seconds
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setActiveTab((current) => {
+                const currentIndex = demos.findIndex(d => d.id === current)
+                const nextIndex = (currentIndex + 1) % demos.length
+                return demos[nextIndex].id
+            })
+        }, 5000)
+        return () => clearInterval(interval)
+    }, [activeTab]) // Reset timer on manual change so user has time to read
+
+    // Find active demo to render its component
+    const activeDemo = demos.find(d => d.id === activeTab)
 
     return (
         <section className="py-24 px-4 bg-muted/30 border-y border-border/40" id="how-it-works">
@@ -109,12 +141,20 @@ export function DemoSection() {
                                 key={demo.id}
                                 onClick={() => setActiveTab(demo.id)}
                                 className={cn(
-                                    "flex items-start gap-4 p-6 text-left rounded-xl transition-all duration-200 border",
+                                    "flex items-start gap-4 p-6 text-left rounded-xl transition-all duration-200 border relative overflow-hidden",
                                     activeTab === demo.id
                                         ? "bg-white border-primary/10 shadow-sm ring-1 ring-primary/5"
                                         : "bg-transparent border-transparent hover:bg-white/50"
                                 )}
                             >
+                                {activeTab === demo.id && (
+                                    <motion.div
+                                        className="absolute bottom-0 left-0 h-1 bg-primary/10"
+                                        initial={{ width: "0%" }}
+                                        animate={{ width: "100%" }}
+                                        transition={{ duration: 5, ease: "linear" }}
+                                    />
+                                )}
                                 <div className={cn(
                                     "mt-1 p-2 rounded-lg transition-colors",
                                     activeTab === demo.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
@@ -144,16 +184,18 @@ export function DemoSection() {
 
                         <div className="mt-8 h-full p-4 bg-muted/10 h-full">
                             <AnimatePresence mode="wait">
-                                <motion.div
-                                    key={activeTab}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -10 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="h-full"
-                                >
-                                    {demos.find(d => d.id === activeTab)?.content}
-                                </motion.div>
+                                {activeDemo && (
+                                    <motion.div
+                                        key={activeTab}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="h-full"
+                                    >
+                                        <activeDemo.Component />
+                                    </motion.div>
+                                )}
                             </AnimatePresence>
                         </div>
                     </div>

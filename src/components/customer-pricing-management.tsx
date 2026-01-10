@@ -104,6 +104,7 @@ export function CustomerPricingManagement({ storeId, customerId, customer, opera
         productId: product.id,
         sellingPrice: price,
         profitMarginPercent: null,
+        visible: !!(price && price > 0), // Auto-hide if no price
         effectiveTo: validUntil ? validUntil.toISOString() : undefined
       })
 
