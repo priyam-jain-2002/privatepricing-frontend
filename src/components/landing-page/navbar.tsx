@@ -3,6 +3,10 @@
 import Link from "next/link"
 import posthog from "posthog-js"
 
+import { Menu } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+
 export function Navbar() {
     return (
         <nav className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
@@ -13,6 +17,8 @@ export function Navbar() {
                             opbase
                         </Link>
                     </div>
+
+                    {/* Desktop Menu */}
                     <div className="hidden md:flex items-center gap-6">
                         <Link
                             href="/login"
@@ -28,6 +34,43 @@ export function Navbar() {
                         >
                             Book Demo
                         </Link>
+                    </div>
+
+                    {/* Mobile Menu */}
+                    <div className="md:hidden">
+                        <Sheet>
+                            <SheetTrigger asChild>
+                                <Button variant="ghost" size="icon" className="-mr-2">
+                                    <Menu className="h-6 w-6" />
+                                    <span className="sr-only">Open menu</span>
+                                </Button>
+                            </SheetTrigger>
+                            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                                <div className="flex flex-col gap-8 mt-8">
+                                    <div className="flex flex-col gap-4">
+                                        <Link
+                                            href="/login"
+                                            onClick={() => posthog.capture('sign_in_clicked', { location: 'mobile_navbar' })}
+                                            className="text-lg font-medium text-foreground hover:text-primary transition-colors"
+                                        >
+                                            Sign in
+                                        </Link>
+                                        <Link
+                                            href="/#early-access"
+                                            onClick={() => posthog.capture('book_demo_clicked', { location: 'mobile_navbar' })}
+                                            className="text-lg font-medium text-foreground hover:text-primary transition-colors"
+                                        >
+                                            Book Demo
+                                        </Link>
+                                    </div>
+                                    <div className="border-t pt-8">
+                                        <p className="text-sm text-muted-foreground">
+                                            Pricing OS for the modern age.
+                                        </p>
+                                    </div>
+                                </div>
+                            </SheetContent>
+                        </Sheet>
                     </div>
                 </div>
             </div>
