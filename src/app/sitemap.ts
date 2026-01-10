@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-    const baseUrl = 'https://opbase.dev' // Using a safe default, user can verify
+    const baseUrl = 'https://opbase.in'
     return [
         {
             url: baseUrl,
