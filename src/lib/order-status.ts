@@ -16,7 +16,7 @@ export const STATUS_CONFIG: Record<number, { label: string, variant: "default" |
     1: { label: "Pending", variant: "secondary" },
     2: { label: "Processing", variant: "info" },
     3: { label: "Shipped", variant: "purple" },
-    4: { label: "PI", variant: "indigo" },
+    4: { label: "Pending Invoice", variant: "indigo" },
     5: { label: "Completed", variant: "success" },
     6: { label: "Cancelled", variant: "destructive" },
 };

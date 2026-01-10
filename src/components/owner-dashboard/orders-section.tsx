@@ -292,7 +292,7 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                                     onClick={() => setViewingPayOrder(order)}
                                 >
                                     <td className="px-6 py-4 text-sm font-mono text-gray-900 font-semibold">
-                                        #{order.orderNumber}
+                                        {order.orderNumber}
                                         {order.customerPoNumber && (
                                             <span className="block text-xs text-gray-500 font-sans mt-0.5">PO: {order.customerPoNumber}</span>
                                         )}
