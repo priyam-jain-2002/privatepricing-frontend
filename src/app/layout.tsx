@@ -28,6 +28,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://opbase.dev'),
   title: "opbase",
   description: "Your Private Pricing OS",
 };
