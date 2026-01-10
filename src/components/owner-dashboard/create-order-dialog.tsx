@@ -88,6 +88,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>("")
     const [selectedBranchId, setSelectedBranchId] = useState<string>("no-branch")
     const [billingBranchId, setBillingBranchId] = useState<string>("no-branch")
+    const [isPickup, setIsPickup] = useState(false)
 
     // Cart logic
     const [cart, setCart] = useState<{ productId: string, quantity: number, customPrice?: number }[]>([])
@@ -146,6 +147,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
         } else {
             // Reset State
             setOrderType('quick')
+            setIsPickup(false)
             setQuickOrderSource("walkin")
             setSelectedCustomerId("")
             setSelectedBranchId("no-branch")
@@ -321,8 +323,10 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
     const executeOrderSubmission = async () => {
         setSubmitting(true)
         try {
-            const finalShippingBranchId = selectedBranchId === "no-branch" ? null : selectedBranchId
-            const finalBillingBranchId = billingBranchId === "no-branch" ? null : billingBranchId
+            // If Pickup is enabled, force shipping/billing branch to null (or rely on them being ignored if not sent, but let's be explicit logic-wise)
+            // Actually, if isPickup, we just send null/undefined for shippingBranchId.
+            const finalShippingBranchId = (isPickup || selectedBranchId === "no-branch") ? null : selectedBranchId
+            const finalBillingBranchId = (isPickup || billingBranchId === "no-branch") ? null : billingBranchId
 
             const payload: any = {
                 items: cart.filter(i => i.quantity > 0).map(item => ({
@@ -486,33 +490,51 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
                                                     ))}
                                                 </SelectContent>
                                             </Select>
+
+                                            <div className="flex items-center space-x-2 mt-2 pt-1">
+                                                <input
+                                                    type="checkbox"
+                                                    id="pickup-mode"
+                                                    checked={isPickup}
+                                                    onChange={(e) => setIsPickup(e.target.checked)}
+                                                    className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
+                                                />
+                                                <label
+                                                    htmlFor="pickup-mode"
+                                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-gray-700"
+                                                >
+                                                    Pickup in store
+                                                </label>
+                                            </div>
                                         </div>
-                                        <div className="space-y-1.5">
-                                            <Label className="text-xs font-semibold uppercase text-gray-500 tracking-wider">Destination / Shipping Branch</Label>
-                                            <Select
-                                                value={selectedBranchId}
-                                                onValueChange={(val) => {
-                                                    setSelectedBranchId(val)
-                                                    // Auto-set billing if same enforced or not yet set? 
-                                                    // If enforcing same, we handle payload construction.
-                                                }}
-                                                disabled={!selectedCustomerId || branches.length === 0}
-                                            >
-                                                <SelectTrigger className="bg-gray-50 border-gray-200">
-                                                    <SelectValue placeholder="Head Office / Default" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {branches.map(b => (
-                                                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
+                                        {!isPickup && (
+                                            <div className="space-y-1.5">
+                                                <Label className="text-xs font-semibold uppercase text-gray-500 tracking-wider">Destination / Shipping Branch</Label>
+                                                <Select
+                                                    value={selectedBranchId}
+                                                    onValueChange={(val) => {
+                                                        setSelectedBranchId(val)
+                                                        // Auto-set billing if same enforced or not yet set? 
+                                                        // If enforcing same, we handle payload construction.
+                                                    }}
+                                                    disabled={!selectedCustomerId || branches.length === 0}
+                                                >
+                                                    <SelectTrigger className="bg-gray-50 border-gray-200">
+                                                        <SelectValue placeholder="Head Office / Default" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {branches.map(b => (
+                                                            <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
 
                                         {(() => {
                                             const customer = customers.find(c => c.id === selectedCustomerId)
                                             // Only show separate billing if isBillToSameAsShipTo is FALSE
-                                            if (customer && !customer.isBillToSameAsShipTo) {
+                                            if (customer && !customer.isBillToSameAsShipTo && !isPickup) {
                                                 return (
                                                     <div className="space-y-1.5">
                                                         <Label className="text-xs font-semibold uppercase text-gray-500 tracking-wider">Billing Branch</Label>
@@ -933,6 +955,6 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </Dialog>
+        </Dialog >
     )
 }

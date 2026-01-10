@@ -107,13 +107,13 @@ export function PayOrderDialog({
                             <div>
                                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Bill To</h4>
                                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                                    {order.billingAddressSnapshot || "Same as Customer Address"}
+                                    {order.billingAddressSnapshot || "N/A"}
                                 </div>
                             </div>
                             <div>
                                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Ship To</h4>
                                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                                    {order.shippingAddressSnapshot || "Same as Billing Address"}
+                                    {order.shippingAddressSnapshot || "Picked up in store"}
                                 </div>
                             </div>
                         </div>
@@ -197,6 +197,7 @@ export function PayOrderDialog({
                             canUpload={canUploadDocuments}
                             requiredDocumentType={requiredDocumentType}
                             userRole={userRole}
+                            isPickup={!order.shippingAddressSnapshot && !order.shippingBranchId}
                         />
                     </TabsContent>
                 </Tabs>

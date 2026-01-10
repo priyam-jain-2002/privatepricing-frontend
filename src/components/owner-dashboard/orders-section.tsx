@@ -338,20 +338,47 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                                                                 // Document Check Logic
                                                                 // 3 = Shipped (Requires Challan)
                                                                 // 4 = PI (Requires GRN)
+                                                                const isPickup = !order.shippingAddressSnapshot && !order.shippingBranchId;
+
+                                                                // Validation 1: Shipped (3) -> Requires Challan (Unless Pickup)
                                                                 if (nextStatus === 3) {
-                                                                    const hasChallan = order.receivings?.some((d: any) => d.type === 'challan');
-                                                                    if (!hasChallan) {
-                                                                        toast.error("Please upload a Challan to mark as Shipped");
-                                                                        setRequiredDocType('challan');
-                                                                        setPendingStatusUpdate({ id: order.id, status: nextStatus });
-                                                                        setViewingPayOrder(order, "documents");
-                                                                        return;
+                                                                    if (!isPickup) {
+                                                                        const hasChallan = order.receivings?.some((d: any) => d.type === 'challan');
+                                                                        if (!hasChallan) {
+                                                                            toast.error("Please upload a Challan to mark as Shipped");
+                                                                            setRequiredDocType('challan');
+                                                                            setPendingStatusUpdate({ id: order.id, status: nextStatus });
+                                                                            setViewingPayOrder(order, "documents");
+                                                                            return;
+                                                                        }
                                                                     }
-                                                                } else if (nextStatus === 4) {
-                                                                    const hasGrn = order.receivings?.some((d: any) => d.type === 'grn');
-                                                                    if (!hasGrn) {
-                                                                        toast.error("Please upload a GRN to mark as PI");
-                                                                        setRequiredDocType('grn');
+                                                                }
+                                                                // Validation 2: PI (4) -> Requires GRN (Unless Pickup)
+                                                                else if (nextStatus === 4) {
+                                                                    if (!isPickup) {
+                                                                        const hasGrn = order.receivings?.some((d: any) => d.type === 'grn');
+                                                                        if (!hasGrn) {
+                                                                            toast.error("Please upload a GRN to mark as PI");
+                                                                            setRequiredDocType('grn');
+                                                                            setPendingStatusUpdate({ id: order.id, status: nextStatus });
+                                                                            setViewingPayOrder(order, "documents");
+                                                                            return;
+                                                                        }
+                                                                    }
+                                                                }
+                                                                // Validation 3: Completed (5) -> Requires Invoice (ALWAYS)
+                                                                else if (nextStatus === 5) {
+                                                                    const hasInvoice = order.invoices?.some((d: any) => d.type === 'invoice' || !d.type); // Handle legacy docs without strict type
+
+                                                                    // Check actual invoice array or typed docs
+                                                                    // Since we upload type='invoice', checking invoices array length strictly might be safer if types are reliable
+                                                                    const invoiceCount = order.invoices?.length || 0;
+
+                                                                    if (invoiceCount === 0) {
+                                                                        toast.error("Please upload an Invoice to Complete the order");
+                                                                        setRequiredDocType('invoice');
+                                                                        // Note: DocumentUpload handles type="invoice" by default for the top section, 
+                                                                        // but we can pass it as reference or just rely on the user seeing the big "Upload Invoice" box.
                                                                         setPendingStatusUpdate({ id: order.id, status: nextStatus });
                                                                         setViewingPayOrder(order, "documents");
                                                                         return;
