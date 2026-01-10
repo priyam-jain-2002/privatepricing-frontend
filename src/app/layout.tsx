@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Playfair_Display, Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { Toaster as ShadcnToaster } from "@/components/ui/toaster";
 import { ErrorMonitor } from "@/components/error-monitor";
 import { Suspense } from "react";
 import { PostHogClientProvider } from "@/components/providers/posthog-provider";
@@ -46,6 +47,7 @@ export default function RootLayout({
             {children}
             <ErrorMonitor />
             <Toaster />
+            <ShadcnToaster />
           </PostHogClientProvider>
         </Suspense>
       </body>

@@ -23,7 +23,7 @@ interface AssetLibraryDialogProps {
     allowedTypes?: string[] // e.g. ['image/', 'application/pdf']
 }
 
-export function AssetLibraryDialog({ open, onOpenChange, onSelect, allowedTypes }: AssetLibraryDialogProps) {
+export function AssetLibraryDialog({ open, onOpenChange, onSelect, allowedTypes = ['image/*', 'application/pdf'] }: AssetLibraryDialogProps) {
     const [assets, setAssets] = useState<Asset[]>([])
     const [loading, setLoading] = useState(false)
     const [uploading, setUploading] = useState(false)
@@ -55,6 +55,23 @@ export function AssetLibraryDialog({ open, onOpenChange, onSelect, allowedTypes 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
+
+        // Strict Client-Side Validation
+        if (allowedTypes && allowedTypes.length > 0) {
+            const isValidType = allowedTypes.some(type => {
+                if (type.endsWith('/*')) {
+                    const baseType = type.split('/')[0];
+                    return file.type.startsWith(`${baseType}/`);
+                }
+                return file.type === type;
+            });
+
+            if (!isValidType) {
+                toast.error(`Invalid file type. Allowed: ${allowedTypes.join(', ').replace('application/', '').replace('image/', '')}`); // Simple formatting
+                e.target.value = ''; // Reset input
+                return;
+            }
+        }
 
         setUploading(true)
         try {
@@ -89,6 +106,10 @@ export function AssetLibraryDialog({ open, onOpenChange, onSelect, allowedTypes 
         // 1. Type Filter from Props (if strict)
         if (allowedTypes && allowedTypes.length > 0) {
             const isAllowed = allowedTypes.some(type => {
+                if (type.endsWith('/*')) {
+                    const baseType = type.slice(0, -1); // "image/"
+                    return asset.mimeType.startsWith(baseType);
+                }
                 if (type.endsWith('/')) return asset.mimeType.startsWith(type)
                 return asset.mimeType === type
             })

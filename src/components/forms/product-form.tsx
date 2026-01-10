@@ -415,14 +415,14 @@ export function ProductForm({ initialData, storeId, operationCostPercentage, onS
                 open={showImageLibrary}
                 onOpenChange={setShowImageLibrary}
                 onSelect={(url) => setFormData(prev => ({ ...prev, images: [...prev.images, url] }))}
-                allowedTypes={['image/']}
+                allowedTypes={['image/*']}
             />
 
             <AssetLibraryDialog
                 open={showPdfLibrary}
                 onOpenChange={setShowPdfLibrary}
                 onSelect={(url) => handleChange("technicalSheet", url)}
-                allowedTypes={['application/pdf', 'image/']}
+                allowedTypes={['application/pdf', 'image/*']}
             />
         </form >
     )

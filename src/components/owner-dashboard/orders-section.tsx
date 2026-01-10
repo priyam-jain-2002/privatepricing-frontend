@@ -3,20 +3,14 @@ import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { History, Plus, Search, Filter, Pencil, ArrowRight } from "lucide-react"
-import { fetchAllOrders, updateOrderStatus, fetchStoreStats } from "@/lib/api"
+import { fetchAllOrders, updateOrderStatus, fetchStoreStats, getUserFromToken } from "@/lib/api"
 import { PayOrderDialog } from "../order-invoice-dialog"
 import { analytics } from "@/lib/analytics"
 import { toast } from "sonner"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { Input } from "@/components/ui/input"
 
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
+// Select imports removed
 import { Badge } from "@/components/ui/badge"
 
 import { CreateOrderDialog } from "./create-order-dialog"
@@ -39,6 +33,9 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
     const [searchQuery, setSearchQuery] = useState("")
     const [activeTab, setActiveTab] = useState<'active' | 'requested' | 'pending' | 'processing' | 'shipped' | 'pi' | 'history'>('active')
     const [stats, setStats] = useState<{ requestedCount: number } | null>(null)
+    const [dialogTab, setDialogTab] = useState<"details" | "documents">("details")
+    const [requiredDocType, setRequiredDocType] = useState<string | undefined>(undefined)
+    const [pendingStatusUpdate, setPendingStatusUpdate] = useState<{ id: string, status: number } | null>(null)
 
     // URL State
     const activeOrderId = searchParams.get('orderId')
@@ -84,14 +81,42 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
         }
     }
 
-    const setViewingPayOrder = (order: any | null) => {
+    const setViewingPayOrder = (order: any | null, tab?: "details" | "documents") => {
+        if (tab) setDialogTab(tab);
+        else setDialogTab("details");
+
         const params = new URLSearchParams(searchParams.toString())
         if (order) {
             params.set('orderId', order.id)
         } else {
             params.delete('orderId')
+            setRequiredDocType(undefined)
+            setPendingStatusUpdate(null) // Clear pending on close
         }
         router.push(`${pathname}?${params.toString()}`)
+    }
+
+    const handleOrderUpdated = async (uploadedType?: string) => {
+        await loadOrders(); // Refresh orders
+
+        // Check for Pending Status Update
+        if (pendingStatusUpdate && uploadedType && uploadedType === requiredDocType && viewingPayOrder) {
+            if (pendingStatusUpdate.id === viewingPayOrder.id) {
+                // Add a small delay so user sees the "Upload Successful" state
+                setTimeout(async () => {
+                    try {
+                        await updateOrderStatus(activeStore.id, pendingStatusUpdate.id, pendingStatusUpdate.status);
+                        toast.success(`Document verified. Order moved to ${STATUS_CONFIG[pendingStatusUpdate.status]?.label}.`);
+                        setViewingPayOrder(null); // Close dialog
+                        setPendingStatusUpdate(null);
+                        loadOrders(); // Refresh again to show new status
+                    } catch (error) {
+                        console.error("Auto-update status failed", error);
+                        toast.error("Failed to update status automatically.");
+                    }
+                }, 500);
+            }
+        }
     }
 
     // Filter Logic
@@ -278,60 +303,9 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{order.currency} {order.finalAmount || order.totalAmount}</td>
                                     <td className="px-6 py-4 text-sm" onClick={(e) => e.stopPropagation()}>
                                         <div className="flex items-center gap-2">
-                                            <Select
-                                                value={order.status}
-                                                onValueChange={async (value) => {
-                                                    try {
-                                                        const statusInt = parseInt(value)
-                                                        // if (!window.confirm("Are you sure you want to update this order status?")) return;
-
-                                                        await updateOrderStatus(activeStore.id, order.id, statusInt);
-
-                                                        const props: any = {
-                                                            orderId: order.id,
-                                                            oldStatus: order.status,
-                                                            newStatus: statusInt
-                                                        }
-
-                                                        if (statusInt === 5 || statusInt === 6) {
-                                                            const created = new Date(order.createdAt).getTime()
-                                                            const now = new Date().getTime()
-                                                            const durationSeconds = Math.floor((now - created) / 1000)
-                                                            props.duration_seconds = durationSeconds
-                                                        }
-
-                                                        analytics.capture('order_status_updated', props);
-
-                                                        // New Order Completion Event
-                                                        if (statusInt === 5) {
-                                                            analytics.capture('order_delivered', {
-                                                                store_id: activeStore.id,
-                                                                order_id: order.id,
-                                                                actor_role: 'store_team'
-                                                            })
-                                                        }
-
-                                                        await loadOrders();
-                                                    } catch (err: any) {
-                                                        toast.error("Failed to update status: " + err.message);
-                                                    }
-                                                }}
-                                            >
-                                                <SelectTrigger className="w-[140px] h-8 text-xs font-medium rounded-full border-gray-200">
-                                                    <SelectValue>
-                                                        <Badge variant={STATUS_CONFIG[order.status]?.variant || "secondary"} className="h-5">
-                                                            {STATUS_CONFIG[order.status]?.label || order.status}
-                                                        </Badge>
-                                                    </SelectValue>
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {Object.entries(STATUS_CONFIG).map(([value, { label }]) => (
-                                                        <SelectItem key={value} value={value} className="text-xs">
-                                                            {label}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            <Badge variant={STATUS_CONFIG[order.status]?.variant || "secondary"} className="h-6 px-2.5 text-xs font-medium border-0">
+                                                {STATUS_CONFIG[order.status]?.label || order.status}
+                                            </Badge>
 
                                             {/* One-Click Next Status Button */}
                                             {(() => {
@@ -349,39 +323,87 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                                                 // Force parse to ensure we don't have string/number mismatch
                                                 const statusInt = parseInt(order.status);
                                                 const nextStatus = getNextStatus(statusInt);
+
                                                 if (nextStatus !== null) {
+                                                    const nextLabel = STATUS_CONFIG[nextStatus]?.label;
                                                     return (
                                                         <Button
-                                                            size="icon"
+                                                            size="sm"
                                                             variant="outline"
-                                                            className="h-8 w-8 text-primary border-primary/20 hover:bg-primary/5 hover:text-primary"
-                                                            title={`Move to ${STATUS_CONFIG[nextStatus]?.label}`}
+                                                            className="h-8 text-xs gap-1.5 px-3 hover:bg-primary hover:text-primary-foreground border-dashed border-gray-300"
+                                                            title={`Move to ${nextLabel}`}
                                                             onClick={async (e) => {
                                                                 e.stopPropagation();
+
+                                                                // Document Check Logic
+                                                                // 3 = Shipped (Requires Challan)
+                                                                // 4 = PI (Requires GRN)
+                                                                if (nextStatus === 3) {
+                                                                    const hasChallan = order.receivings?.some((d: any) => d.type === 'challan');
+                                                                    if (!hasChallan) {
+                                                                        toast.error("Please upload a Challan to mark as Shipped");
+                                                                        setRequiredDocType('challan');
+                                                                        setPendingStatusUpdate({ id: order.id, status: nextStatus });
+                                                                        setViewingPayOrder(order, "documents");
+                                                                        return;
+                                                                    }
+                                                                } else if (nextStatus === 4) {
+                                                                    const hasGrn = order.receivings?.some((d: any) => d.type === 'grn');
+                                                                    if (!hasGrn) {
+                                                                        toast.error("Please upload a GRN to mark as PI");
+                                                                        setRequiredDocType('grn');
+                                                                        setPendingStatusUpdate({ id: order.id, status: nextStatus });
+                                                                        setViewingPayOrder(order, "documents");
+                                                                        return;
+                                                                    }
+                                                                }
+
                                                                 try {
                                                                     await updateOrderStatus(activeStore.id, order.id, nextStatus);
-                                                                    await loadOrders();
-                                                                    if (activeTab === 'requested') loadStats(); // Refresh red dot if moving from requested
-                                                                    toast.success(`Order moved to ${STATUS_CONFIG[nextStatus]?.label}`);
 
                                                                     // Analytics
-                                                                    analytics.capture('order_status_updated', {
+                                                                    const props: any = {
                                                                         orderId: order.id,
                                                                         oldStatus: order.status,
                                                                         newStatus: nextStatus,
                                                                         method: 'one_click'
-                                                                    });
+                                                                    }
+
+                                                                    if (nextStatus === 5) {
+                                                                        const created = new Date(order.createdAt).getTime()
+                                                                        const now = new Date().getTime()
+                                                                        const durationSeconds = Math.floor((now - created) / 1000)
+                                                                        props.duration_seconds = durationSeconds
+                                                                    }
+
+                                                                    analytics.capture('order_status_updated', props);
+
+                                                                    if (nextStatus === 5) {
+                                                                        analytics.capture('order_delivered', {
+                                                                            store_id: activeStore.id,
+                                                                            order_id: order.id,
+                                                                            actor_role: 'store_team'
+                                                                        })
+                                                                    }
+
+                                                                    await loadOrders();
+                                                                    if (activeTab === 'requested') loadStats();
+                                                                    toast.success(`Order moved to ${nextLabel}`);
+
                                                                 } catch (err: any) {
                                                                     toast.error(err.message);
                                                                 }
                                                             }}
                                                         >
-                                                            <ArrowRight className="h-4 w-4" />
+                                                            <span>Move to {nextLabel}</span>
+                                                            <ArrowRight className="h-3 w-3" />
                                                         </Button>
                                                     )
                                                 }
                                                 return null;
                                             })()}
+
+
 
                                             <Button
                                                 variant="ghost"
@@ -402,13 +424,20 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                         </tbody>
                     </table>
                 </div>
-            </Card>
+            </Card >
 
-            <PayOrderDialog
-                order={viewingPayOrder}
-                open={!!viewingPayOrder}
-                onOpenChange={(open: boolean) => !open && setViewingPayOrder(null)}
-            />
+            {viewingPayOrder && (
+                <PayOrderDialog
+                    order={viewingPayOrder}
+                    open={!!viewingPayOrder}
+                    onOpenChange={(open: boolean) => !open && setViewingPayOrder(null)}
+                    onOrderUpdated={handleOrderUpdated}
+                    canUploadDocuments={true}
+                    initialTab={dialogTab}
+                    requiredDocumentType={requiredDocType}
+                    userRole={getUserFromToken()?.role}
+                />
+            )}
 
             <CreateOrderDialog
                 open={showCreateOrder}
@@ -419,6 +448,6 @@ export function OrdersSection({ activeStore }: OrdersSectionProps) {
                 onOrderCreated={loadOrders}
                 initialOrder={editingOrder}
             />
-        </div>
+        </div >
     )
 }
