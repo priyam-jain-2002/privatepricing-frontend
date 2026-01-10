@@ -510,7 +510,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
                                         </div>
 
                                         {!isPickup && (
-                                            <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <div className="space-y-1.5">
                                                     <Label className="text-xs font-semibold uppercase text-gray-500 tracking-wider">Destination / Shipping Branch</Label>
                                                     <Select
@@ -668,7 +668,7 @@ export function CreateOrderDialog({ open, onOpenChange, onOrderCreated, initialO
                     </div>
 
                     {/* RIGHT: Cart Summary - Fluid width */}
-                    <div className={`${mobileTab === 'cart' ? 'flex' : 'hidden'} md:flex flex-[1.3] min-w-0 md:min-w-[400px] flex-col bg-white border-l shadow-xl shadow-gray-200/50 z-20`}>
+                    <div className={`${mobileTab === 'cart' ? 'flex' : 'hidden'} md:flex flex-[1.3] min-w-0 md:min-w-[320px] flex-col bg-white border-l shadow-xl shadow-gray-200/50 z-20`}>
                         <div className="p-6 bg-gray-50/50 border-b flex items-center gap-2">
                             <Receipt className="w-4 h-4 text-gray-500" />
                             <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-600">Purchase Order</h3>
