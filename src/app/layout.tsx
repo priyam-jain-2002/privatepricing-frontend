@@ -28,9 +28,29 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://opbase.dev'),
-  title: "opbase",
-  description: "Your Private Pricing OS",
+  metadataBase: new URL('https://www.opbase.in'),
+  title: {
+    default: "Opbase - Order Operations Platform",
+    template: "%s | Opbase"
+  },
+  description: "The unified solution to manage orders without ERP. Simplify your workflow with WhatsApp order management, customer specific pricing, and precise partial delivery tracking.",
+  keywords: [
+    "order operations platform",
+    "manage orders without ERP",
+    "whatsapp order management",
+    "customer specific pricing",
+    "order tracking for distributors",
+    "partial delivery tracking",
+    "ERP alternative SME"
+  ],
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://www.opbase.in',
+    title: "Opbase - Order Operations Platform",
+    description: "The unified solution to manage orders without ERP. Simplify your workflow with WhatsApp order management, customer specific pricing, and precise partial delivery tracking.",
+    siteName: "Opbase",
+  }
 };
 
 export default function RootLayout({
